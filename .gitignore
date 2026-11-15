@@ -1,0 +1,12 @@
+node_modules/
+.wrangler/
+.wrangler-build/
+.dev.vars
+.env
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+coverage/
+dist/
+dev-server.log
+dev-server.err.log
