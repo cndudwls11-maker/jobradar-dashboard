@@ -10,6 +10,8 @@ tmp/
 *.sqlite-wal
 coverage/
 dist/
+cloudrun/.env
+cloudrun/.env.*
 dev-server.log
 manual-flow.log
 dev-server.err.logmanual-flow.log

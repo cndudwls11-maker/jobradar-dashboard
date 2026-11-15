@@ -10,6 +10,7 @@
 - D1 저장형 미확인/확인, 즐겨찾기, 개별/일괄 논리 삭제 및 복구
 - 산업/기업/직무/선호지역/경력 조건 저장, 수동 수집 시 필터 적용
 - 공고 수집 버튼은 저장 조건으로 사이트 검색 탭을 엽니다. 사용자가 브라우저에서 상세·접수 상태를 확인한 공고는 별도 관리자 등록 창으로 수동 저장합니다. Worker는 Ego Browser 세션을 제어하거나 페이지를 자동 판독하지 않습니다.
+- Google Cloud Scheduler + Cloud Run Job용 구성은 `cloudrun/`에 있습니다. Google Cloud 프로젝트/CLI가 준비되지 않아 아직 배포하지 않았습니다. 현재 사이트별 connector는 승인 전 요청을 보내지 않아 예약 실행 기록만 남기고 신규 공고는 저장하지 않습니다.
 - 버튼을 클릭한 경우에만 4개 독립 수집 어댑터 실행 및 사이트별 결과/오류 기록
 - 관리자 로그인 세션, HttpOnly/Secure/SameSite 쿠키, CSRF 방어, 입력 검증, 수집 요청 제한
 - Cloudflare D1 SQLite 마이그레이션과 Wrangler 로컬 개발
@@ -127,7 +128,7 @@ npx.cmd wrangler pages secret put SESSION_SECRET --project-name jobradar-dashboa
 - `POST /api/jobs/:id/restore`, `POST /api/jobs/restore`
 - `POST /api/manual-jobs` (관리자 확인 후 입력, 맞춤 조건/HTTPS/중복/삭제 이력 검증)
 - `GET/PUT /api/preferences`
-- `POST /api/collections` (버튼 클릭 전용), `GET /api/collections`, `GET /api/collections/:id`
+- `POST /api/collections` (버튼 클릭 전용), `POST /api/scheduled-collection` (Scheduler 전용 Bearer Secret), `GET /api/collections`, `GET /api/collections/:id`
 - `GET /api/sites`, `GET /api/health`
 
 사이트 연결 시에는 공개 API의 공식 문서/허가 범위에 한정하고 타임아웃, 페이지/요청 상한, 실행 분할을 설정해야 합니다. 현재 수집이 승인된 곳이 없으므로 외부 HTTP 수집 요청 자체가 없습니다. Workers 요청 내 API는 짧은 시간 내 끝나는 synchronous 작업이며, 승인된 대량 수집 도입 전에는 Cloudflare Workflows/Queues 등 적절한 비동기 분할로 설계해야 합니다. Cron은 추가하지 않습니다.

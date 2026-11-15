@@ -29,7 +29,7 @@ function fakeDb() {
   };
 }
 
-const baseEnv = { ADMIN_USERNAME: 'admin', ADMIN_PASSWORD: 'local-password', SESSION_SECRET: 'test-session-secret-that-is-long-enough-12345' };
+const baseEnv = { ADMIN_USERNAME: 'admin', ADMIN_PASSWORD: 'local-password', SESSION_SECRET: 'test-session-secret-that-is-long-enough-12345', SCHEDULER_TOKEN: 'scheduler-test-token-long-enough-12345' };
 let db;
 beforeEach(() => { db = fakeDb(); });
 
@@ -90,6 +90,19 @@ describe('Worker API authentication and routes', () => {
     const response = await worker.fetch(new Request('https://jobradar.test/api/collections', { method: 'POST', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: '{}' }), { ...baseEnv, DB: db });
     expect(response.status).toBe(200);
     const result = await response.json();
+    expect(result.newCount).toBe(0);
+    expect(result.sites).toHaveLength(4);
+    expect(result.sites.every((site) => site.status === 'unconnected')).toBe(true);
+    expect(db.state.queries.some(({ sql }) => sql.includes('INSERT INTO collection_sites'))).toBe(true);
+  });
+
+  it('scheduled collection requires a bearer token and records only actual unconnected site outcomes', async () => {
+    const unauthorized = await worker.fetch(new Request('https://jobradar.test/api/scheduled-collection', { method: 'POST' }), { ...baseEnv, DB: db });
+    expect(unauthorized.status).toBe(401);
+    const response = await worker.fetch(new Request('https://jobradar.test/api/scheduled-collection', { method: 'POST', headers: { Authorization: 'Bearer scheduler-test-token-long-enough-12345' } }), { ...baseEnv, DB: db });
+    expect(response.status).toBe(200);
+    const result = await response.json();
+    expect(result.trigger).toBe('scheduled');
     expect(result.newCount).toBe(0);
     expect(result.sites).toHaveLength(4);
     expect(result.sites.every((site) => site.status === 'unconnected')).toBe(true);

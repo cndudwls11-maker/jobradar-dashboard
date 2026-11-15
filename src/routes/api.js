@@ -12,6 +12,13 @@ api.post('/auth/login', login);
 api.get('/auth/session', requireAdmin, sessionInfo);
 api.post('/auth/logout', requireAdmin, logout);
 
+api.post('/scheduled-collection', async (c) => {
+  const expected = c.env.SCHEDULER_TOKEN;
+  const authorization = c.req.header('Authorization') || '';
+  if (!expected || !constantTimeTokenMatch(authorization, expected)) return c.json({ error: '예약 수집 인증에 실패했습니다.' }, 401);
+  return runCollection(c, 'scheduled');
+});
+
 api.use('/jobs', requireAdmin);
 api.use('/jobs/*', requireAdmin);
 api.use('/manual-jobs', requireAdmin);
@@ -134,7 +141,7 @@ api.put('/preferences', async (c) => {
   return c.json(formatPreferences(await getPreferences(c.env.DB)));
 });
 
-api.post('/collections', collectionRateLimit, async (c) => runCollection(c));
+api.post('/collections', collectionRateLimit, async (c) => runCollection(c, 'manual'));
 api.get('/collections', async (c) => {
   const page = boundedInt(c.req.query('page'), 1, 1, 100000);
   const [runs, count] = await Promise.all([
@@ -199,7 +206,7 @@ async function bulkRestore(c, singleId = null) {
   return c.json({ ok: true, changed: result.meta.changes });
 }
 
-async function runCollection(c) {
+async function runCollection(c, trigger = 'manual') {
   const db = c.env.DB;
   const prefs = await getPreferences(db);
   const runId = crypto.randomUUID();
@@ -226,10 +233,10 @@ async function runCollection(c) {
     details.push({ id: result.site.id, name: result.site.name, status: result.status, newCount: siteNew, duplicateCount: siteDuplicate, deletedExcludedCount: siteDeleted, excludedCount: siteExcluded, error: result.error || null });
   }
   const status = errorCount > 0 ? (newCount + duplicateCount + deletedExcludedCount + excludedCount > 0 ? 'partial' : 'failed') : 'completed';
-  const summary = { newCount, duplicateCount, deletedExcludedCount, excludedCount, errorCount, sites: details };
+  const summary = { newCount, duplicateCount, deletedExcludedCount, excludedCount, errorCount, trigger, sites: details };
   await db.prepare("UPDATE collection_runs SET finished_at=?,status=?,new_count=?,duplicate_count=?,deleted_excluded_count=?,excluded_count=?,error_count=?,summary_json=? WHERE id=?")
     .bind(new Date().toISOString(), status, newCount, duplicateCount, deletedExcludedCount, excludedCount, errorCount, JSON.stringify(summary), runId).run();
-  return c.json({ id: runId, status, ...summary, noResultsHint: newCount === 0 && prefs.industries.length + prefs.companies.length + prefs.roles.length > 0 ? '조건에 맞는 새 공고가 없거나, 연결된 사이트에서 수집하지 못했습니다. 사이트별 상태와 오류를 확인하세요.' : null }, status === 'failed' ? 502 : 200);
+  return c.json({ id: runId, status, ...summary, noResultsHint: newCount === 0 && prefs.industries.length + prefs.companies.length + prefs.roles.length + prefs.locations.length > 0 ? '조건에 맞는 신규 공고가 없거나 연결된 사이트에서 수집하지 못했습니다. 사이트별 상태와 오류를 확인하세요.' : null }, status === 'failed' ? 502 : 200);
 }
 
 async function getPreferences(db) {
@@ -269,4 +276,12 @@ async function collectionRateLimit(c, next) {
     .first();
   if (existing) return c.json({ error: '수집 요청은 10초에 한 번만 실행할 수 있습니다.' }, 429);
   await next();
+}
+
+function constantTimeTokenMatch(header, expected) {
+  const provided = header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (provided.length !== expected.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i += 1) mismatch |= provided.charCodeAt(i) ^ expected.charCodeAt(i);
+  return mismatch === 0;
 }
