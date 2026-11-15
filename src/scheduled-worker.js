@@ -4,7 +4,7 @@ import { validateJob } from './services/validation.js';
 
 export async function runScheduledCollection(env) {
   const SITE_MAX = 10;
-  const GLOBAL_MAX = 30;
+  const GLOBAL_MAX = 40;
   const db = env.DB;
   const prefs = await getPreferences(db);
   const runId = crypto.randomUUID();
