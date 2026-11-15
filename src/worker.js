@@ -17,7 +17,10 @@ app.use('/api/*', cors({ origin: (origin, c) => origin === new URL(c.req.url).or
 
 app.get('/api/health', (c) => c.json({ ok: true, service: 'JobRadar', collectionMode: 'manual-only' }));
 app.route('/api', api);
-app.notFound((c) => c.json({ error: '요청한 경로를 찾을 수 없습니다.' }, 404));
+app.notFound(async (c) => {
+  if ((c.env.ASSETS || c.env.ASSETS_FETCHER) && !c.req.path.startsWith('/api/')) return (c.env.ASSETS || c.env.ASSETS_FETCHER).fetch(c.req.raw);
+  return c.json({ error: '요청한 경로를 찾을 수 없습니다.' }, 404);
+});
 app.onError((error, c) => {
   console.error('JobRadar API error:', error);
   return c.json({ error: '서버 오류가 발생했습니다.' }, 500);

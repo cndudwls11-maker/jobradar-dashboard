@@ -1,6 +1,7 @@
 node_modules/
 .wrangler/
 .wrangler-build/
+.wrangler-functions-build/
 .dev.vars
 .env
 *.sqlite

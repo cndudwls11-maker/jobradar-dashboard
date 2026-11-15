@@ -52,14 +52,16 @@ Copy-Item .dev.vars.example .dev.vars
 
 `.dev.vars`를 열어 강한 로컬 관리자 비밀번호와 최소 32자 `SESSION_SECRET`을 지정합니다. 이 파일은 Git에 추가하지 않습니다.
 
-`wrangler.jsonc`의 `database_id`를 `local-jobradar-db`처럼 로컬 개발용 값으로 설정하고 D1 마이그레이션을 적용합니다.
+`wrangler.jsonc`에는 Pages 프로젝트 설정(`pages_build_output_dir: ./public`)과 D1 바인딩이 들어 있습니다. 실제 새 D1 ID를 받으면 placeholder를 바꿔야 합니다. 기본 UI만 확인할 때에는 `npx wrangler pages dev public`을 사용하면 Pages Functions와 정적 파일을 로컬에서 확인할 수 있습니다.
 
 ```powershell
+npx.cmd wrangler d1 create jobradar-db
+# 출력된 ID를 wrangler.jsonc의 database_id에 넣고 실행
 npx.cmd wrangler d1 migrations apply jobradar-db --local
-npm.cmd run dev
+npm.cmd run pages:dev
 ```
 
-화면: `http://localhost:8787`. 이 과정은 Cloudflare에 배포하지 않으며 로컬 D1만 사용합니다. 테스트 DB에는 실제 공고를 넣지 않고, 유닛 테스트의 메모리 mock만 사용합니다.
+화면: Pages dev가 출력하는 localhost 주소. 이 과정은 Cloudflare에 배포하지 않으며 로컬 D1만 사용합니다. 테스트 DB에는 실제 공고를 넣지 않고, 유닛 테스트의 메모리 mock만 사용합니다.
 
 ## 테스트 및 검사
 
@@ -79,7 +81,7 @@ Vitest는 입력 정규화/검증, URL 중복 기준, OR/AND 수집 조건, 논�
 
 1. Cloudflare Dashboard에서 **새 D1 데이터베이스**를 직접 생성합니다. 기존 DB는 사용하지 않습니다.
 2. 신규 DB 이름을 `jobradar-db`로 지정하고 새 ID를 복사합니다.
-3. `wrangler.jsonc`의 `database_id`를 새 ID로 교체합니다.
+3. `wrangler.jsonc`의 `database_id`를 새 ID로 교체합니다. 이 프로젝트의 Pages Functions는 `functions/api/[[path]].js`에서 API를 처리하고, Pages binding은 이 Wrangler 구성 파일을 기준으로 합니다.
 4. 새 DB에 마이그레이션을 적용합니다.
 
 ```powershell
@@ -141,7 +143,17 @@ robots.txt 허용만으로 저작권·이용약관상 수집 및 재게시 권�
 
 ## 배포 방법 (사용자가 직접)
 
-Cloudflare 배포는 이 개발 작업에서 실행하지 않았습니다. 사용자가 코드와 신규 D1을 확인한 뒤 직접 진행할 때:
+Cloudflare 배포는 이 개발 작업에서 실행하지 않았습니다. Pages 프로젝트 설정은 다음처럼 설정합니다.
+
+- Framework preset: `None` (정적 파일 프로젝트)
+- Build command: 빈칸 (별도 빌드 단계 없음)
+- Build output directory: `public`
+- Root directory: 저장소 루트(`/` 또는 빈칸)
+- Production branch: `main`
+
+`functions/api/[[path]].js`는 `/api/*` 요청을 Hono Worker API로 넘깁니다. Pages Dashboard의 D1 binding에서 binding name `DB`를 사용자가 생성한 새 `jobradar-db`에 연결하고, production/preview 환경 중 실제 사용할 환경을 선택해야 합니다. Wrangler 설정을 Pages에서 사용하도록 적용할 때는 D1 ID placeholder도 교체해야 합니다.
+
+사용자가 코드와 신규 D1을 확인한 뒤 직접 진행할 때:
 
 1. 새 Worker/D1을 만들고 `wrangler.jsonc`의 새 D1 ID 입력
 2. 신규 D1에 원격 마이그레이션 적용
