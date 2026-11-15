@@ -6,7 +6,7 @@ const state = { route: 'all', page: 1, deletedPage: 1, totalPages: 1, deletedPag
 const INDUSTRIES = ['금속 제조업','철강 제조업','비철금속 제조업','반도체 제조업','자동차 부품 제조업'];
 const ROLES = ['품질관리(QC)','품질보증(QA)','생산관리','생산기술','공정관리'];
 const LOCATIONS = ['서울','경기','인천','충청남도','충청북도','대전','세종','강원','부산','울산','대구','경상남도','경상북도','광주','전라남도','전라북도','제주'];
-const TITLES = { all: '전체 채용공고', unread: '미확인 공고', favorites: '즐겨찾기', preferences: '맞춤 채용 조건', deleted: '삭제된 공고 관리', collections: '수집 현황', settings: '설정' };
+const TITLES = { all: '전체 채용공고', unread: '미확인 공고', favorites: '즐겨찾기', preferences: '맞춤 채용 조건', deleted: '삭제된 공고 관리' };
 
 async function initialize() {
   bindEvents();
@@ -103,8 +103,6 @@ async function enterRoute() {
     if (viewId === 'all') await loadJobs();
     if (state.route === 'preferences') await loadPreferences();
     if (state.route === 'deleted') await loadDeleted();
-    if (state.route === 'collections') await loadCollections();
-    if (state.route === 'settings') await loadSettings();
   } catch (error) { if (error.status === 401) $('#login-screen').hidden = false; else toast(error.message, 'error'); }
 }
 
@@ -340,19 +338,5 @@ async function restoreSelected() {
   try { const result = await api.bulkRestore(ids); toast(`${result.changed}건의 공고를 복구했습니다.`); await loadDeleted(); } catch (error) { toast(error.message, 'error'); }
 }
 function changeDeletedPage(delta) { state.deletedPage = Math.min(state.deletedPages, Math.max(1, state.deletedPage + delta)); loadDeleted(); }
-
-async function loadCollections() {
-  const [result, sites] = await Promise.all([api.collections(), api.sites()]);
-  $('#site-status-list').innerHTML = sites.sites.map((site) => `<article class="site-status-card"><strong>${escapeHtml(site.name)}</strong><span class="status-label">${escapeHtml(site.status)}</span><p>${escapeHtml(site.detail)}</p></article>`).join('');
-  $('#collections-body').innerHTML = result.runs.map((run) => `<tr><td>${formatDate(run.started_at, true)}</td><td>${escapeHtml(run.status)}<span class="sub-text">${run.trigger === 'scheduled' ? '예약 실행' : '직접 실행'}</span></td><td>${run.new_count}</td><td>${run.duplicate_count}</td><td>${run.deleted_excluded_count}</td><td>${run.error_count}</td><td>${run.sites.map((site) => `${escapeHtml(site.source_site)}: ${escapeHtml(site.status)}${site.error_message ? ` — ${escapeHtml(site.error_message)}` : ''}`).join('<br>') || 'X'}</td></tr>`).join('');
-  $('#collections-empty').hidden = result.runs.length > 0;
-}
-async function loadSettings() {
-  const result = await api.sites();
-  $('#settings-site-list').innerHTML = result.sites.map((site) => `<div class="connection-row"><strong>${escapeHtml(site.name)}</strong><span class="connection-state">${escapeHtml(site.status)}</span><p>${escapeHtml(site.detail)}</p></div>`).join('');
-  const unconnected = result.sites.filter((site) => site.status !== '연결됨').length;
-  $('#site-notice').hidden = false;
-  $('#site-notice').textContent = `현재 모든 외부 사이트는 미연결 상태입니다 (${unconnected}곳). 무단 수집은 하지 않으며, 공식 API 승인 또는 서면 허가를 받은 뒤 연결해야 합니다.`;
-}
 
 initialize();

@@ -16,43 +16,25 @@ export async function runScheduledCollection(env) {
   let deletedExcludedCount = 0;
   let excludedCount = 0;
   let errorCount = 0;
-  const sites = [];
-
   for (const result of results) {
     let siteAccepted = 0;
     let siteNew = 0;
-    let siteDuplicate = 0;
-    let siteDeleted = 0;
-    let siteExcluded = 0;
     if (result.status === 'failed') errorCount += 1;
     for (const raw of result.jobs || []) {
-      if (siteAccepted >= SITE_MAX) { siteExcluded += 1; excludedCount += 1; continue; }
+      if (siteAccepted >= SITE_MAX || (newCount + duplicateCount + deletedExcludedCount + excludedCount) >= GLOBAL_MAX) { excludedCount += 1; continue; }
       try {
         const job = validateJob(raw);
-        if (!matchesPreferences(job, prefs)) {
-          excludedCount += 1;
-          siteExcluded += 1;
-          continue;
-        }
+        if (!matchesPreferences(job, prefs)) { excludedCount += 1; continue; }
         const stored = await persistNewJob(db, job);
-        if (stored.kind === 'new') {
-          if (siteNew >= SITE_MAX || (newCount + duplicateCount + deletedExcludedCount + excludedCount) >= GLOBAL_MAX) { excludedCount += 1; siteExcluded += 1; continue; }
-          newCount += 1; siteNew += 1; siteAccepted += 1;
-        }
-        else if (stored.kind === 'deleted') { deletedExcludedCount += 1; siteDeleted += 1; }
-        else { duplicateCount += 1; siteDuplicate += 1; siteAccepted += 1; }
-      } catch (error) {
-        errorCount += 1;
-        result.error = [result.error, error instanceof Error ? error.message : '공고 처리 오류'].filter(Boolean).join(' | ');
-      }
+        if (stored.kind === 'new') { newCount += 1; siteNew += 1; siteAccepted += 1; }
+        else if (stored.kind === 'deleted') deletedExcludedCount += 1;
+        else { duplicateCount += 1; siteAccepted += 1; }
+      } catch { errorCount += 1; }
     }
-    await db.prepare(`INSERT INTO collection_sites(run_id,source_site,status,discovered_count,new_count,duplicate_count,deleted_excluded_count,excluded_count,error_message) VALUES(?,?,?,?,?,?,?,?,?)`)
-      .bind(runId, result.site.id, result.status, (result.jobs || []).length, siteNew, siteDuplicate, siteDeleted, siteExcluded, result.error || null).run();
-    sites.push({ id: result.site.id, name: result.site.name, status: result.status, newCount: siteNew, duplicateCount: siteDuplicate, deletedExcludedCount: siteDeleted, excludedCount: siteExcluded, error: result.error || null });
   }
 
   const status = errorCount > 0 ? (newCount + duplicateCount + deletedExcludedCount + excludedCount > 0 ? 'partial' : 'failed') : 'completed';
-  const summary = { trigger: 'scheduled', newCount, duplicateCount, deletedExcludedCount, excludedCount, errorCount, sites };
+  const summary = { trigger: 'scheduled', newCount, duplicateCount, deletedExcludedCount, excludedCount, errorCount };
   await db.prepare("UPDATE collection_runs SET finished_at=?,status=?,new_count=?,duplicate_count=?,deleted_excluded_count=?,excluded_count=?,error_count=?,summary_json=? WHERE id=?")
     .bind(new Date().toISOString(), status, newCount, duplicateCount, deletedExcludedCount, excludedCount, errorCount, JSON.stringify(summary), runId).run();
   return { id: runId, status, ...summary };

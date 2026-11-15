@@ -85,18 +85,18 @@ describe('Worker API authentication and routes', () => {
     expect(deleted.status).toBe(409);
   });
 
-  it('manual collection records four real unconnected adapter results and does not fake jobs', async () => {
+  it('manual collection runs connectors but does not expose or store site-level status rows', async () => {
     const { cookie, csrf } = await login();
     const response = await worker.fetch(new Request('https://jobradar.test/api/collections', { method: 'POST', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: '{}' }), { ...baseEnv, DB: db });
     expect(response.status).toBe(200);
     const result = await response.json();
     expect(result.newCount).toBe(0);
-    expect(result.sites).toHaveLength(4);
-    expect(result.sites.every((site) => site.status === 'unconnected')).toBe(true);
-    expect(db.state.queries.some(({ sql }) => sql.includes('INSERT INTO collection_sites'))).toBe(true);
+    expect(result.trigger).toBe('manual');
+    expect(result.sites).toBeUndefined();
+    expect(db.state.queries.some(({ sql }) => sql.includes('INSERT INTO collection_sites'))).toBe(false);
   });
 
-  it('scheduled collection requires a bearer token and records only actual unconnected site outcomes', async () => {
+  it('scheduled collection requires a bearer token and records run totals without site-level details', async () => {
     const unauthorized = await worker.fetch(new Request('https://jobradar.test/api/scheduled-collection', { method: 'POST' }), { ...baseEnv, DB: db });
     expect(unauthorized.status).toBe(401);
     const response = await worker.fetch(new Request('https://jobradar.test/api/scheduled-collection', { method: 'POST', headers: { Authorization: 'Bearer scheduler-test-token-long-enough-12345' } }), { ...baseEnv, DB: db });
@@ -104,9 +104,8 @@ describe('Worker API authentication and routes', () => {
     const result = await response.json();
     expect(result.trigger).toBe('scheduled');
     expect(result.newCount).toBe(0);
-    expect(result.sites).toHaveLength(4);
-    expect(result.sites.every((site) => site.status === 'unconnected')).toBe(true);
-    expect(db.state.queries.some(({ sql }) => sql.includes('INSERT INTO collection_sites'))).toBe(true);
+    expect(result.sites).toBeUndefined();
+    expect(db.state.queries.some(({ sql }) => sql.includes('INSERT INTO collection_sites'))).toBe(false);
   });
 
   it('applies default expiry filtering while keeping favorites query available', async () => {

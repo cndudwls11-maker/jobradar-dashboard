@@ -142,34 +142,6 @@ api.put('/preferences', async (c) => {
 });
 
 api.post('/collections', collectionRateLimit, async (c) => runCollection(c, 'manual'));
-api.get('/collections', async (c) => {
-  const page = boundedInt(c.req.query('page'), 1, 1, 100000);
-  const [runs, count] = await Promise.all([
-    c.env.DB.prepare('SELECT * FROM collection_runs ORDER BY started_at DESC LIMIT ? OFFSET ?').bind(25, (page - 1) * 25).all(),
-    c.env.DB.prepare('SELECT COUNT(*) AS total FROM collection_runs').first(),
-  ]);
-  const siteRows = await c.env.DB.prepare(`SELECT cs.* FROM collection_sites cs JOIN collection_runs cr ON cr.id = cs.run_id ORDER BY cr.started_at DESC, cs.id ASC LIMIT 200`).all();
-  const byRun = new Map();
-  for (const item of siteRows.results) { if (!byRun.has(item.run_id)) byRun.set(item.run_id, []); byRun.get(item.run_id).push(item); }
-  return c.json({ runs: runs.results.map((run) => ({ ...run, trigger: readTrigger(run.summary_json), sites: byRun.get(run.id) || [] })), page, total: count.total, pages: Math.ceil(count.total / 25) });
-});
-
-api.get('/collections/:id', async (c) => {
-  const id = c.req.param('id');
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return c.json({ error: '수집 실행 ID가 올바르지 않습니다.' }, 400);
-  const run = await c.env.DB.prepare('SELECT * FROM collection_runs WHERE id=?').bind(id).first();
-  if (!run) return c.json({ error: '수집 이력을 찾을 수 없습니다.' }, 404);
-  const sites = await c.env.DB.prepare('SELECT * FROM collection_sites WHERE run_id=?').bind(id).all();
-  return c.json({ ...run, trigger: readTrigger(run.summary_json), sites: sites.results });
-});
-
-api.get('/sites', async (c) => c.json({ sites: [
-  { id: 'saramin', name: '사람인', status: c.env.SARAMIN_API_KEY ? '미연결' : '미연결', detail: '공식 API access-key 신청 및 승인 필요' },
-  { id: 'jobkorea', name: '잡코리아', status: '미연결', detail: 'robots.txt 제한 확인; 공식 API/허가 미확인' },
-  { id: 'incruit', name: '인크루트', status: '미연결', detail: 'robots.txt 전체 경로 차단; API/허가 필요' },
-  { id: 'jasoseol', name: '자소설닷컴', status: '미연결', detail: '공식 API/자동 수집 및 재사용 허가 미확인' },
-] }));
-
 async function setJobFlag(c, field) {
   const id = parseId(c.req.param('id'));
   if (!id) return c.json({ error: '공고 ID가 올바르지 않습니다.' }, 400);
@@ -214,26 +186,21 @@ async function runCollection(c, trigger = 'manual') {
   await db.prepare("INSERT INTO collection_runs(id,started_at,status) VALUES(?,?,'running')").bind(runId, startedAt).run();
   const results = await collectAll(prefs, c.env);
   let newCount = 0, duplicateCount = 0, deletedExcludedCount = 0, excludedCount = 0, errorCount = 0;
-  const details = [];
   for (const result of results) {
-    let siteNew = 0, siteDuplicate = 0, siteDeleted = 0, siteExcluded = 0;
     if (result.status === 'failed') errorCount += 1;
     for (const raw of result.jobs || []) {
       try {
         const job = validateJob(raw);
-        if (!matchesPreferences(job, prefs)) { excludedCount += 1; siteExcluded += 1; continue; }
+        if (!matchesPreferences(job, prefs)) { excludedCount += 1; continue; }
         const persisted = await persistNewJob(db, job);
-        if (persisted.kind === 'new') { newCount += 1; siteNew += 1; }
-        else if (persisted.kind === 'deleted') { deletedExcludedCount += 1; siteDeleted += 1; }
-        else { duplicateCount += 1; siteDuplicate += 1; }
-      } catch (error) { errorCount += 1; result.error = [result.error, error.message].filter(Boolean).join(' | '); }
+        if (persisted.kind === 'new') newCount += 1;
+        else if (persisted.kind === 'deleted') deletedExcludedCount += 1;
+        else duplicateCount += 1;
+      } catch { errorCount += 1; }
     }
-    await db.prepare(`INSERT INTO collection_sites(run_id,source_site,status,discovered_count,new_count,duplicate_count,deleted_excluded_count,excluded_count,error_message) VALUES(?,?,?,?,?,?,?,?,?)`)
-      .bind(runId, result.site.id, result.status, (result.jobs || []).length, siteNew, siteDuplicate, siteDeleted, siteExcluded, result.error || null).run();
-    details.push({ id: result.site.id, name: result.site.name, status: result.status, newCount: siteNew, duplicateCount: siteDuplicate, deletedExcludedCount: siteDeleted, excludedCount: siteExcluded, error: result.error || null });
   }
   const status = errorCount > 0 ? (newCount + duplicateCount + deletedExcludedCount + excludedCount > 0 ? 'partial' : 'failed') : 'completed';
-  const summary = { newCount, duplicateCount, deletedExcludedCount, excludedCount, errorCount, trigger, sites: details };
+  const summary = { newCount, duplicateCount, deletedExcludedCount, excludedCount, errorCount, trigger };
   await db.prepare("UPDATE collection_runs SET finished_at=?,status=?,new_count=?,duplicate_count=?,deleted_excluded_count=?,excluded_count=?,error_count=?,summary_json=? WHERE id=?")
     .bind(new Date().toISOString(), status, newCount, duplicateCount, deletedExcludedCount, excludedCount, errorCount, JSON.stringify(summary), runId).run();
   return c.json({ id: runId, status, ...summary, noResultsHint: newCount === 0 && prefs.industries.length + prefs.companies.length + prefs.roles.length + prefs.locations.length > 0 ? '조건에 맞는 신규 공고가 없거나 연결된 사이트에서 수집하지 못했습니다. 사이트별 상태와 오류를 확인하세요.' : null }, status === 'failed' ? 502 : 200);
@@ -269,10 +236,6 @@ function validateIds(value) {
 }
 
 function escapeLike(value) { return value.replace(/[\\%_]/g, '\\$&'); }
-
-function readTrigger(summaryJson) {
-  try { return JSON.parse(summaryJson || '{}').trigger || 'manual'; } catch { return 'manual'; }
-}
 
 async function collectionRateLimit(c, next) {
   const session = c.get('session');

@@ -38,6 +38,4 @@ export const api = {
   savePreferences: (value) => request('/preferences', { method: 'PUT', body: JSON.stringify(value) }),
   collect: () => request('/collections', { method: 'POST', body: '{}' }),
   createManualJob: (job) => request('/manual-jobs', { method: 'POST', body: JSON.stringify(job) }),
-  collections: (page = 1) => request(`/collections?page=${page}`),
-  sites: () => request('/sites'),
 };
