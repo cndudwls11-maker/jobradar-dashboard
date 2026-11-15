@@ -8,7 +8,7 @@
 
 - 반응형 공고 게시판, 검색·필터·정렬·페이지네이션
 - D1 저장형 미확인/확인, 즐겨찾기, 개별/일괄 논리 삭제 및 복구
-- 산업/기업/직무/경력 조건 저장, 수동 수집 시 필터 적용
+- 산업/기업/직무/선호지역/경력 조건 저장, 수동 수집 시 필터 적용
 - 버튼을 클릭한 경우에만 4개 독립 수집 어댑터 실행 및 사이트별 결과/오류 기록
 - 관리자 로그인 세션, HttpOnly/Secure/SameSite 쿠키, CSRF 방어, 입력 검증, 수집 요청 제한
 - Cloudflare D1 SQLite 마이그레이션과 Wrangler 로컬 개발
@@ -94,7 +94,7 @@ npx.cmd wrangler d1 migrations apply jobradar-preview-db --remote --config wrang
 ### 테이블
 
 - `jobs`: 공통 공고 필드, 사이트 ID + 정규화 URL 유니크 제약, read/favorite/soft-delete 상태
-- `preferences`: 단일 관리자 맞춤 산업/기업/직무/경력 조건
+- `preferences`: 단일 관리자 맞춤 산업/기업/직무/지역/경력 조건
 - `collection_runs`, `collection_sites`: 실행별 및 사이트별 수집 상태/오류/결과
 - `admin_sessions`: 세션 토큰 해시, CSRF 토큰, 만료 시각
 

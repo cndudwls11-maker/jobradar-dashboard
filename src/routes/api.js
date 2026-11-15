@@ -101,15 +101,16 @@ api.get('/preferences', async (c) => {
 api.put('/preferences', async (c) => {
   let body;
   try { body = await c.req.json(); } catch { return c.json({ error: '요청 JSON이 올바르지 않습니다.' }, 400); }
-  let industries, companies, roles;
+  let industries, companies, roles, locations;
   try {
     industries = parseList(body.industries, '산업');
     companies = parseList(body.companies, '기업');
     roles = parseList(body.roles, '직무');
+    locations = parseList(body.locations || [], '선호 지역');
   } catch (error) { return c.json({ error: error.message }, 400); }
   if (!CAREER_LEVELS.includes(body.career_level)) return c.json({ error: '경력 조건이 올바르지 않습니다.' }, 400);
-  await c.env.DB.prepare(`UPDATE preferences SET industries_json=?, companies_json=?, roles_json=?, career_level=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=1`)
-    .bind(JSON.stringify(industries), JSON.stringify(companies), JSON.stringify(roles), body.career_level).run();
+  await c.env.DB.prepare(`UPDATE preferences SET industries_json=?, companies_json=?, roles_json=?, locations_json=?, career_level=?, updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=1`)
+    .bind(JSON.stringify(industries), JSON.stringify(companies), JSON.stringify(roles), JSON.stringify(locations), body.career_level).run();
   return c.json(formatPreferences(await getPreferences(c.env.DB)));
 });
 
@@ -213,11 +214,11 @@ async function runCollection(c) {
 
 async function getPreferences(db) {
   const prefs = await db.prepare('SELECT * FROM preferences WHERE id=1').first();
-  return { ...prefs, industries: JSON.parse(prefs.industries_json), companies: JSON.parse(prefs.companies_json), roles: JSON.parse(prefs.roles_json) };
+  return { ...prefs, industries: JSON.parse(prefs.industries_json), companies: JSON.parse(prefs.companies_json), roles: JSON.parse(prefs.roles_json), locations: JSON.parse(prefs.locations_json || '[]') };
 }
 
 function formatPreferences(prefs) {
-  return { industries: JSON.parse(prefs.industries_json), companies: JSON.parse(prefs.companies_json), roles: JSON.parse(prefs.roles_json), career_level: prefs.career_level, updated_at: prefs.updated_at };
+  return { industries: JSON.parse(prefs.industries_json), companies: JSON.parse(prefs.companies_json), roles: JSON.parse(prefs.roles_json), locations: JSON.parse(prefs.locations_json || '[]'), career_level: prefs.career_level, updated_at: prefs.updated_at };
 }
 
 function formatJob(row) {

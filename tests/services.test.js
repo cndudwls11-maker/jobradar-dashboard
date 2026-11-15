@@ -30,15 +30,22 @@ describe('input normalization', () => {
 });
 
 describe('preference matching', () => {
-  const prefs = { industries_json: '["금속 제조업","철강 제조업"]', companies_json: '["다른 기업"]', roles_json: '["품질관리","생산기술"]', career_level: '신입' };
+  const prefs = { industries_json: '["금속 제조업","철강 제조업"]', companies_json: '["다른 기업"]', roles_json: '["품질관리","생산기술"]', locations_json: '["천안","아산"]', career_level: '신입' };
   it('uses OR within group and AND between industry/company, role, and career conditions', () => {
-    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '품질관리(QC)', career_requirement: '신입' }, prefs)).toBe(true);
-    expect(matchesPreferences({ industry: '교육', company_name: '다른 기업', job_title: '생산기술', career_requirement: '신입' }, prefs)).toBe(true);
-    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '영업', career_requirement: '신입' }, prefs)).toBe(false);
-    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '품질관리', career_requirement: '경력' }, prefs)).toBe(false);
+    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '품질관리(QC)', career_requirement: '신입', work_location: '천안' }, prefs)).toBe(true);
+    expect(matchesPreferences({ industry: '교육', company_name: '다른 기업', job_title: '생산기술', career_requirement: '신입', work_location: '아산' }, prefs)).toBe(true);
+    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '영업', career_requirement: '신입', work_location: '천안' }, prefs)).toBe(false);
+    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '품질관리', career_requirement: '경력', work_location: '천안' }, prefs)).toBe(false);
+    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '품질관리', career_requirement: '신입', work_location: '충남 천안시' }, prefs)).toBe(true);
+    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '품질관리', career_requirement: '신입', work_location: '충남 아산시' }, prefs)).toBe(true);
+    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '품질관리', career_requirement: '신입', work_location: '경기 안산시' }, prefs)).toBe(false);
   });
   it('allows unknown career detail rather than silently discarding a matching posting', () => {
-    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '품질관리', career_requirement: null }, prefs)).toBe(true);
+    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '품질관리', career_requirement: null, work_location: '천안' }, prefs)).toBe(true);
+  });
+  it('does not impose a location restriction when no location preference is selected', () => {
+    const noLocationPrefs = { ...prefs, locations_json: '[]' };
+    expect(matchesPreferences({ industry: '철강 제조업', company_name: '한빛철강', job_title: '품질관리', career_requirement: '신입', work_location: '부산 기장군' }, noLocationPrefs)).toBe(true);
   });
 });
 

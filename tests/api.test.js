@@ -10,7 +10,7 @@ function fakeDb() {
         async first() {
           state.queries.push({ sql, values: this.values });
           if (sql.includes('FROM admin_sessions')) return state.sessions.get(this.values[0]) || null;
-          if (sql.includes('FROM preferences')) return { id: 1, industries_json: '[]', companies_json: '[]', roles_json: '[]', industries: [], companies: [], roles: [], career_level: '신입', updated_at: '2026-11-15T00:00:00Z' };
+          if (sql.includes('FROM preferences')) return { id: 1, industries_json: '[]', companies_json: '[]', roles_json: '[]', locations_json: '[]', industries: [], companies: [], roles: [], locations: [], career_level: '신입', updated_at: '2026-11-15T00:00:00Z' };
           if (sql.includes('SELECT COUNT(*) AS total FROM jobs')) { state.queries.push({ sql, values: this.values }); return { total: 0 }; }
           if (sql.includes('COUNT(*) AS total FROM collection_runs')) return { total: 0 };
           return null;
@@ -53,9 +53,12 @@ describe('Worker API authentication and routes', () => {
 
   it('allows a same-origin CSRF-protected settings update and validates input', async () => {
     const { cookie, csrf } = await login();
-    const response = await worker.fetch(new Request('https://jobradar.test/api/preferences', { method: 'PUT', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ industries: ['철강 제조업'], companies: [], roles: ['품질관리'], career_level: '신입' }) }), { ...baseEnv, DB: db });
+    const response = await worker.fetch(new Request('https://jobradar.test/api/preferences', { method: 'PUT', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ industries: ['철강 제조업'], companies: [], roles: ['품질관리'], locations: ['충청남도','천안시'], career_level: '신입' }) }), { ...baseEnv, DB: db });
     expect(response.status).toBe(200);
     expect(db.state.queries.some(({ sql, values }) => sql.includes('UPDATE preferences') && values.includes('["철강 제조업"]'))).toBe(true);
+    expect(db.state.queries.some(({ sql, values }) => sql.includes('locations_json') && values.includes('["충청남도","천안시"]'))).toBe(true);
+    const invalidLocations = await worker.fetch(new Request('https://jobradar.test/api/preferences', { method: 'PUT', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ industries: [], companies: [], roles: [], locations: Array.from({ length: 51 }, (_, i) => `지역${i}`), career_level: '신입' }) }), { ...baseEnv, DB: db });
+    expect(invalidLocations.status).toBe(400);
     const invalid = await worker.fetch(new Request('https://jobradar.test/api/preferences', { method: 'PUT', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ industries: [], companies: [], roles: [], career_level: '관리자' }) }), { ...baseEnv, DB: db });
     expect(invalid.status).toBe(400);
   });

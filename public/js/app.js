@@ -1,9 +1,10 @@
 import { api } from './api.js';
 import { $, $$, confirmDialog, deadlineLabel, display, escapeHtml, formatDate, toast } from './ui.js';
 
-const state = { route: 'all', page: 1, deletedPage: 1, totalPages: 1, deletedPages: 1, jobs: [], deleted: [], selected: new Set(), deletedSelected: new Set(), mode: 'all', preferences: { industries: [], companies: [], roles: [], career_level: '신입' }, searchTimer: null, loading: false, requestId: 0 };
+const state = { route: 'all', page: 1, deletedPage: 1, totalPages: 1, deletedPages: 1, jobs: [], deleted: [], selected: new Set(), deletedSelected: new Set(), mode: 'all', preferences: { industries: [], companies: [], roles: [], locations: [], career_level: '신입' }, searchTimer: null, loading: false, requestId: 0 };
 const INDUSTRIES = ['금속 제조업','철강 제조업','비철금속 제조업','반도체 제조업','자동차 부품 제조업'];
 const ROLES = ['품질관리(QC)','품질보증(QA)','생산관리','생산기술','공정관리'];
+const LOCATIONS = ['서울','경기','인천','충청남도','충청북도','대전','세종','강원','부산','울산','대구','경상남도','경상북도','광주','전라남도','전라북도','제주'];
 const TITLES = { all: '전체 채용공고', unread: '미확인 공고', favorites: '즐겨찾기', preferences: '맞춤 채용 조건', deleted: '삭제된 공고 관리', collections: '수집 현황', settings: '설정' };
 
 async function initialize() {
@@ -51,10 +52,13 @@ function bindEvents() {
   $('#add-industry').addEventListener('click', () => addCustom('industries','custom-industry'));
   $('#add-company').addEventListener('click', () => addCustom('companies','custom-company'));
   $('#add-role').addEventListener('click', () => addCustom('roles','custom-role'));
+  $('#add-location').addEventListener('click', () => addCustom('locations','custom-location'));
   $('#industry-options').addEventListener('click', onPreferenceChip);
   $('#role-options').addEventListener('click', onPreferenceChip);
+  $('#location-options').addEventListener('click', onPreferenceChip);
   $('#company-chips').addEventListener('click', onRemoveChip);
   $('#role-chips').addEventListener('click', onRemoveChip);
+  $('#location-chips').addEventListener('click', onRemoveChip);
   $('#deleted-body').addEventListener('click', onRestoreClick);
   $('#deleted-body').addEventListener('change', onDeletedSelection);
   $('#deleted-select-all').addEventListener('change', toggleDeletedSelection);
@@ -221,10 +225,12 @@ async function loadPreferences() {
 function renderPreferenceOptions() {
   $('#industry-options').innerHTML = INDUSTRIES.map((name) => `<button type="button" class="choice-chip ${state.preferences.industries.includes(name) ? 'selected' : ''}" data-kind="industries" data-value="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('');
   $('#role-options').innerHTML = ROLES.map((name) => `<button type="button" class="choice-chip ${state.preferences.roles.includes(name) ? 'selected' : ''}" data-kind="roles" data-value="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('');
+  $('#location-options').innerHTML = LOCATIONS.map((name) => `<button type="button" class="choice-chip ${state.preferences.locations.includes(name) ? 'selected' : ''}" data-kind="locations" data-value="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('');
 }
 function renderCustomChips() {
   $('#company-chips').innerHTML = state.preferences.companies.map((name) => customChip(name, 'companies')).join('');
   $('#role-chips').innerHTML = state.preferences.roles.filter((name) => !ROLES.includes(name)).map((name) => customChip(name, 'roles')).join('');
+  $('#location-chips').innerHTML = state.preferences.locations.filter((name) => !LOCATIONS.includes(name)).map((name) => customChip(name, 'locations')).join('');
 }
 function customChip(name, kind) { return `<span class="custom-chip">${escapeHtml(name)}<button type="button" data-remove="${kind}" data-value="${escapeHtml(name)}" aria-label="${escapeHtml(name)} 삭제">×</button></span>`; }
 function onPreferenceChip(event) {

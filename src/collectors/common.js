@@ -36,6 +36,7 @@ export function matchesPreferences(job, prefs) {
   const industries = safeArray(prefs.industries_json);
   const companies = safeArray(prefs.companies_json);
   const roles = safeArray(prefs.roles_json);
+  const locations = safeArray(prefs.locations_json);
   const hasIndustryCompany = industries.length > 0 || companies.length > 0;
   const industryOrCompanyMatches = !hasIndustryCompany ||
     industries.some((value) => contains(job.industry, value)) ||
@@ -45,7 +46,8 @@ export function matchesPreferences(job, prefs) {
   const careerMatches = !prefs.career_level || prefs.career_level === '전체' ||
     !job.career_requirement || job.career_requirement.includes(prefs.career_level) ||
     (prefs.career_level === '신입/경력' && /신입|경력/.test(job.career_requirement));
-  return industryOrCompanyMatches && roleMatches && careerMatches;
+  const locationMatches = locations.length === 0 || locations.some((value) => contains(job.work_location, value));
+  return industryOrCompanyMatches && roleMatches && careerMatches && locationMatches;
 }
 
 function contains(value, needle) {
