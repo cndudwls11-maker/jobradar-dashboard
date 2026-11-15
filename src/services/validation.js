@@ -1,4 +1,4 @@
-export const SITES = ['saramin', 'jobkorea', 'incruit', 'jasoseol'];
+export const SITES = ['saramin', 'jobkorea', 'incruit', 'jasoseol', 'linkareer'];
 export const CAREER_LEVELS = ['신입', '경력', '신입/경력', '전체'];
 
 export function normalizeUrl(value) {

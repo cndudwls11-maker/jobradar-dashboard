@@ -133,7 +133,7 @@ function renderJobs(result) {
     const row = document.createElement('tr');
     row.innerHTML = `<td><input type="checkbox" class="job-select" data-id="${job.id}" ${state.selected.has(job.id) ? 'checked' : ''} aria-label="공고 선택"></td>
       <td class="company-cell" title="${escapeHtml(job.company_name || 'X')}">${display(job.company_name)}${isNew(job) ? '<span class="new-badge">NEW</span>' : ''}</td>
-      <td><a class="title-link" href="${safeHref(job.canonical_url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(job.job_title || 'X')}">${display(job.job_title)}</a></td>
+      <td><a class="title-link" href="${safeHref(job.canonical_url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(job.job_title || '미확인')}">${display(job.job_title)}</a>${job.match_status ? `<span class="sub-text">${escapeHtml(job.match_status)}</span>` : ''}</td>
       <td>${display(job.career_requirement)}<span class="sub-text">${display(job.education_requirement)}</span></td>
       <td>${display(job.employment_type)}</td><td>${display(job.work_location)}</td><td>${display(job.salary)}</td>
       <td><span class="pill ${deadline.className}">${escapeHtml(deadline.label)}</span></td>

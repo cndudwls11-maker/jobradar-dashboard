@@ -5,7 +5,7 @@ export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 }
 
-export function display(value) { return value === null || value === undefined || value === '' ? 'X' : escapeHtml(value); }
+export function display(value) { return value === null || value === undefined || value === '' ? '미확인' : escapeHtml(value); }
 
 export function toast(message, type = '') {
   const region = $('#toast-region');
@@ -35,7 +35,7 @@ export function formatDate(value, withTime = false) {
 }
 
 export function deadlineLabel(value) {
-  if (!value) return { label: 'X', className: '' };
+  if (!value) return { label: '미확인', className: '' };
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const target = new Date(`${value}T00:00:00`);
   if (Number.isNaN(target.getTime())) return { label: 'X', className: '' };

@@ -3,10 +3,11 @@ import { requireAdmin, login, logout, sessionInfo } from '../services/auth.js';
 import { CAREER_LEVELS, SITES, parseList, validateManualJob } from '../services/validation.js';
 import { collectAll } from '../collectors/index.js';
 import { matchesPreferences, persistNewJob } from '../collectors/common.js';
+import { ingestEmail } from '../services/email-ingest.js';
 
 export const api = new Hono();
 const PAGE_SIZE = 25;
-const SITE_LABELS = { saramin: '사람인', jobkorea: '잡코리아', incruit: '인크루트', jasoseol: '자소설닷컴' };
+const SITE_LABELS = { saramin: '사람인', jobkorea: '잡코리아', incruit: '인크루트', jasoseol: '자소설닷컴', linkareer: '링커리어' };
 
 api.post('/auth/login', login);
 api.get('/auth/session', requireAdmin, sessionInfo);
@@ -17,6 +18,19 @@ api.post('/scheduled-collection', async (c) => {
   const authorization = c.req.header('Authorization') || '';
   if (!expected || !constantTimeTokenMatch(authorization, expected)) return c.json({ error: '예약 수집 인증에 실패했습니다.' }, 401);
   return runCollection(c, 'scheduled');
+});
+
+api.post('/email-ingest', async (c) => {
+  const secret = c.env.EMAIL_INGEST_SECRET;
+  if (!secret || secret.length < 32 || !constantTimeTokenMatch(c.req.header('Authorization') || '', secret)) return c.json({ error: '인증이 필요합니다.' }, 401);
+  let body;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'JSON 본문이 올바르지 않습니다.' }, 400); }
+  try { return c.json(await ingestEmail(c.env.DB, body)); }
+  catch (error) {
+    if (error instanceof TypeError) return c.json({ error: error.message }, 400);
+    console.error('email-ingest failed', error);
+    return c.json({ error: '저장하지 못했습니다. 다시 시도합니다.' }, 503);
+  }
 });
 
 api.use('/jobs', requireAdmin);
@@ -56,7 +70,7 @@ api.get('/jobs', async (c) => {
   if (career) { where.push('career_requirement LIKE ?'); binds.push(`%${escapeLike(career)}%`); }
   if (industry) { where.push('industry LIKE ?'); binds.push(`%${escapeLike(industry)}%`); }
   if (location) { where.push('work_location LIKE ?'); binds.push(`%${escapeLike(location)}%`); }
-  if (deadline === 'open') where.push('(deadline IS NULL OR deadline >= date(\'now\'))');
+  if (deadline === 'open') where.push('(deadline IS NOT NULL AND deadline >= date(\'now\'))');
   if (deadline === 'expired') where.push("deadline < date('now')");
   if (read === 'true') where.push('is_read = 1');
   if (read === 'false') where.push('is_read = 0');

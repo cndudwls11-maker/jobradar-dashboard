@@ -29,7 +29,11 @@ export async function persistNewJob(db, job) {
     job.industry, job.career_requirement, job.education_requirement, job.employment_type,
     job.work_location, job.salary, job.deadline, job.published_at, job.collected_at,
   ).run();
-  return result.meta?.changes ? { kind: 'new' } : { kind: 'duplicate' };
+  if (result.success === false) throw new Error('D1 공고 저장에 실패했습니다.');
+  if (result.meta?.changes) return { kind: 'new' };
+  const raced = await findExisting(db, job);
+  if (raced) return { kind: raced.is_deleted ? 'deleted' : 'duplicate', id: raced.id };
+  throw new Error('공고가 저장되지 않았고 기존 공고도 확인되지 않았습니다.');
 }
 
 export function matchesPreferences(job, prefs) {
