@@ -79,16 +79,17 @@ Vitest는 입력 정규화/검증, URL 중복 기준, OR/AND 수집 조건, 논�
 
 ## D1 생성 및 마이그레이션
 
-1. 이 프로젝트에서는 새 D1 `jobradar-db`를 생성했고 초기 마이그레이션도 적용했습니다. 생성 ID는 `f9300b4a-b6e2-4be8-90b9-bf870aa6f02e`입니다. 다른 Cloudflare 계정으로 옮길 경우 그 계정에서 새 DB를 만들고 ID를 교체하세요.
-2. `wrangler.jsonc`의 D1 binding 이름은 `DB`입니다. Pages Functions의 Production과 Preview에 이 바인딩이 적용되는지 Dashboard > Settings > Bindings에서 확인하세요.
+1. Production 전용 D1 `jobradar-db`와 Preview 전용 D1 `jobradar-preview-db`를 생성하고 각 DB에 초기 마이그레이션을 적용했습니다. 기존 D1은 변경하지 않았습니다.
+2. `wrangler.jsonc`의 Pages D1 binding 이름은 양 환경에서 `DB`입니다. Production은 `jobradar-db`, Preview는 `jobradar-preview-db`로 분리했습니다.
 3. 이 프로젝트의 Pages Functions는 `functions/api/[[path]].js`에서 API를 처리합니다. Pages Functions 배포에 Wrangler 설정을 사용하면 `wrangler.jsonc`가 설정 원본입니다.
-4. 새 DB를 다른 계정에 만든 경우에만 해당 새 DB에 마이그레이션을 적용합니다.
+4. 다른 Cloudflare 계정에 복제할 경우 그 계정에 새 Production/Preview D1을 만든 뒤 각각 마이그레이션을 적용합니다.
 
 ```powershell
 npx.cmd wrangler d1 migrations apply jobradar-db --remote --config wrangler.jsonc
+npx.cmd wrangler d1 migrations apply jobradar-preview-db --remote --config wrangler.jsonc
 ```
 
-현재 연결된 개인 계정에는 신규 DB와 마이그레이션이 적용되어 있습니다. 다른 계정에서 위 명령을 실행하기 전에 DB 이름/ID를 재확인하세요.
+현재 연결된 개인 계정에는 두 신규 DB와 마이그레이션이 적용되어 있습니다. 다른 계정에서 위 명령을 실행하기 전에 DB 이름/ID를 재확인하세요.
 
 ### 테이블
 

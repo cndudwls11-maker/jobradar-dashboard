@@ -3,11 +3,39 @@
   "name": "jobradar-dashboard",
   "compatibility_date": "2026-10-30",
   "pages_build_output_dir": "./public",
+  "env": {
+    "production": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "jobradar-db",
+          "database_id": "f9300b4a-b6e2-4be8-90b9-bf870aa6f02e",
+          "migrations_dir": "migrations"
+        }
+      ]
+    },
+    "preview": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "jobradar-preview-db",
+          "database_id": "044a9197-86b0-4f60-b167-ae1b230f0fa7",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
+  },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "jobradar-db",
       "database_id": "f9300b4a-b6e2-4be8-90b9-bf870aa6f02e",
+      "migrations_dir": "migrations"
+    },
+    {
+      "binding": "PREVIEW_DB_MIGRATION_TARGET",
+      "database_name": "jobradar-preview-db",
+      "database_id": "044a9197-86b0-4f60-b167-ae1b230f0fa7",
       "migrations_dir": "migrations"
     }
   ],
