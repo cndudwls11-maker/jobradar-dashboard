@@ -22,7 +22,6 @@ async function initialize() {
 function bindEvents() {
   $('#login-form').addEventListener('submit', onLogin);
   $('#logout-button').addEventListener('click', logout);
-  $('#settings-logout').addEventListener('click', logout);
   $('#menu-toggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
   window.addEventListener('hashchange', enterRoute);
   $('#collect-button').addEventListener('click', runCollection);
