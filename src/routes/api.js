@@ -151,7 +151,7 @@ api.get('/collections', async (c) => {
   const siteRows = await c.env.DB.prepare(`SELECT cs.* FROM collection_sites cs JOIN collection_runs cr ON cr.id = cs.run_id ORDER BY cr.started_at DESC, cs.id ASC LIMIT 200`).all();
   const byRun = new Map();
   for (const item of siteRows.results) { if (!byRun.has(item.run_id)) byRun.set(item.run_id, []); byRun.get(item.run_id).push(item); }
-  return c.json({ runs: runs.results.map((run) => ({ ...run, sites: byRun.get(run.id) || [] })), page, total: count.total, pages: Math.ceil(count.total / 25) });
+  return c.json({ runs: runs.results.map((run) => ({ ...run, trigger: readTrigger(run.summary_json), sites: byRun.get(run.id) || [] })), page, total: count.total, pages: Math.ceil(count.total / 25) });
 });
 
 api.get('/collections/:id', async (c) => {
@@ -160,7 +160,7 @@ api.get('/collections/:id', async (c) => {
   const run = await c.env.DB.prepare('SELECT * FROM collection_runs WHERE id=?').bind(id).first();
   if (!run) return c.json({ error: '수집 이력을 찾을 수 없습니다.' }, 404);
   const sites = await c.env.DB.prepare('SELECT * FROM collection_sites WHERE run_id=?').bind(id).all();
-  return c.json({ ...run, sites: sites.results });
+  return c.json({ ...run, trigger: readTrigger(run.summary_json), sites: sites.results });
 });
 
 api.get('/sites', async (c) => c.json({ sites: [
@@ -269,6 +269,10 @@ function validateIds(value) {
 }
 
 function escapeLike(value) { return value.replace(/[\\%_]/g, '\\$&'); }
+
+function readTrigger(summaryJson) {
+  try { return JSON.parse(summaryJson || '{}').trigger || 'manual'; } catch { return 'manual'; }
+}
 
 async function collectionRateLimit(c, next) {
   const session = c.get('session');

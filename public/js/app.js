@@ -344,7 +344,7 @@ function changeDeletedPage(delta) { state.deletedPage = Math.min(state.deletedPa
 async function loadCollections() {
   const [result, sites] = await Promise.all([api.collections(), api.sites()]);
   $('#site-status-list').innerHTML = sites.sites.map((site) => `<article class="site-status-card"><strong>${escapeHtml(site.name)}</strong><span class="status-label">${escapeHtml(site.status)}</span><p>${escapeHtml(site.detail)}</p></article>`).join('');
-  $('#collections-body').innerHTML = result.runs.map((run) => `<tr><td>${formatDate(run.started_at, true)}</td><td>${escapeHtml(run.status)}</td><td>${run.new_count}</td><td>${run.duplicate_count}</td><td>${run.deleted_excluded_count}</td><td>${run.error_count}</td><td>${run.sites.map((site) => `${escapeHtml(site.source_site)}: ${escapeHtml(site.status)}${site.error_message ? ` — ${escapeHtml(site.error_message)}` : ''}`).join('<br>') || 'X'}</td></tr>`).join('');
+  $('#collections-body').innerHTML = result.runs.map((run) => `<tr><td>${formatDate(run.started_at, true)}</td><td>${escapeHtml(run.status)}<span class="sub-text">${run.trigger === 'scheduled' ? '예약 실행' : '직접 실행'}</span></td><td>${run.new_count}</td><td>${run.duplicate_count}</td><td>${run.deleted_excluded_count}</td><td>${run.error_count}</td><td>${run.sites.map((site) => `${escapeHtml(site.source_site)}: ${escapeHtml(site.status)}${site.error_message ? ` — ${escapeHtml(site.error_message)}` : ''}`).join('<br>') || 'X'}</td></tr>`).join('');
   $('#collections-empty').hidden = result.runs.length > 0;
 }
 async function loadSettings() {
