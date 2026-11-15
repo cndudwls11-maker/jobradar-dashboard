@@ -152,6 +152,8 @@ Cloudflare 배포는 이 개발 작업에서 실행하지 않았습니다. Pages
 - Root directory: 저장소 루트(`/` 또는 빈칸)
 - Production branch: `main`
 
+Pages 프로젝트 설정 API에서 Git 연동 프로젝트의 build output directory를 `public`으로 설정했고, Production 브랜치 `main`과 기존 저장소 연결을 유지했습니다.
+
 `functions/api/[[path]].js`는 `/api/*` 요청을 Hono Worker API로 넘깁니다. Pages Dashboard의 D1 binding에서 binding name `DB`를 사용자가 생성한 새 `jobradar-db`에 연결하고, production/preview 환경 중 실제 사용할 환경을 선택해야 합니다. Wrangler 설정을 Pages에서 사용하도록 적용할 때는 D1 ID placeholder도 교체해야 합니다.
 
 사용자가 코드와 신규 D1을 확인한 뒤 직접 진행할 때:
