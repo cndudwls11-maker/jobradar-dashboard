@@ -77,17 +77,24 @@ function parseAlertHtml_(html) {
 function unwrapGoogleUrl_(href) {
   var candidate = href;
   for (var i = 0; i < 3; i += 1) {
-    try {
-      var url = new URL(decodeHtml_(candidate), 'https://www.google.com/');
-      var host = url.hostname.toLowerCase();
-      if ((host === 'google.com' || /\.google\.com$/.test(host)) && /^(?:\/url|\/aclk)$/i.test(url.pathname)) {
-        var target = url.searchParams.get('url') || url.searchParams.get('q') || url.searchParams.get('adurl');
-        if (target) { candidate = target; continue; }
+    var match = /^(https?):\/\/([^\/?#]+)(\/[^?#]*)?(?:\?([^#]*))?/i.exec(decodeHtml_(candidate));
+    if (!match) return '';
+    var host = match[2].toLowerCase();
+    if ((host === 'google.com' || /\.google\.com$/.test(host)) && /^(?:\/url|\/aclk)$/i.test(match[3] || '')) {
+      var params = String(match[4] || '').split('&');
+      var target = '';
+      for (var p = 0; p < params.length; p += 1) {
+        var part = params[p].split('=');
+        if (/^(url|q|adurl)$/i.test(part[0])) {
+          try { target = decodeURIComponent(part.slice(1).join('=').replace(/\+/g, ' ')); } catch (ignored) { return ''; }
+          if (target) break;
+        }
       }
-      return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
-    } catch (ignored) { return ''; }
+      if (target) { candidate = target; continue; }
+    }
+    return candidate;
   }
-  try { return new URL(candidate).href; } catch (ignored) { return ''; }
+  return candidate;
 }
 
 function nearbySummary_(html, start, end, anchorInner) {
@@ -131,9 +138,8 @@ function writeAckedIds_(props, ids) {
 }
 
 function isPlatformUrl_(value) {
-  try {
-    var url = new URL(value), host = url.hostname.toLowerCase().replace(/^www\./, '');
-    return (url.protocol === 'https:' || url.protocol === 'http:') &&
-      ['saramin.co.kr', 'jobkorea.co.kr', 'm.jobkorea.co.kr', 'incruit.com', 'jasoseol.com', 'linkareer.com'].indexOf(host) >= 0;
-  } catch (ignored) { return false; }
+  var match = /^https?:\/\/([^\/?#]+)/i.exec(value || '');
+  if (!match) return false;
+  var host = match[1].toLowerCase().replace(/^www\./, '');
+  return ['saramin.co.kr', 'jobkorea.co.kr', 'm.jobkorea.co.kr', 'incruit.com', 'jasoseol.com', 'linkareer.com'].indexOf(host) >= 0;
 }

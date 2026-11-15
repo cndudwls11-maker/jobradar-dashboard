@@ -9,7 +9,7 @@ function harness({ threads = [], fetchStatus = 200, fetchBody = '{"ok":true}' } 
   const calls = [];
   const done = { name: 'done' };
   const context = {
-    URL, console: { error: vi.fn() },
+    console: { error: vi.fn() },
     LockService: { getScriptLock: () => ({ tryLock: () => true, releaseLock: vi.fn() }) },
     PropertiesService: { getScriptProperties: () => ({ getProperty: key => props.get(key) || null, setProperty: (key, value) => props.set(key, value) }) },
     GmailApp: {
