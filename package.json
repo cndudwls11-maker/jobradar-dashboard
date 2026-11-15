@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "pages:dev": "wrangler pages dev public",
+    "cron:dev": "wrangler dev --config wrangler.cron.jsonc",
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "wrangler pages functions build functions --outdir .wrangler-functions-build"

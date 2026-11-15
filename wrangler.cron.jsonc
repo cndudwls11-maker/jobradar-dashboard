@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jobradar-daily-collection",
+  "main": "src/scheduled-worker.js",
+  "compatibility_date": "2026-10-30",
+  "triggers": {
+    "crons": ["0 0 * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "jobradar-db",
+      "database_id": "f9300b4a-b6e2-4be8-90b9-bf870aa6f02e",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
