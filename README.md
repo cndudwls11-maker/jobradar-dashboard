@@ -9,6 +9,7 @@
 - 반응형 공고 게시판, 검색·필터·정렬·페이지네이션
 - D1 저장형 미확인/확인, 즐겨찾기, 개별/일괄 논리 삭제 및 복구
 - 산업/기업/직무/선호지역/경력 조건 저장, 수동 수집 시 필터 적용
+- 공고 수집 버튼은 저장 조건으로 사이트 검색 탭을 엽니다. 사용자가 브라우저에서 상세·접수 상태를 확인한 공고는 별도 관리자 등록 창으로 수동 저장합니다. Worker는 Ego Browser 세션을 제어하거나 페이지를 자동 판독하지 않습니다.
 - 버튼을 클릭한 경우에만 4개 독립 수집 어댑터 실행 및 사이트별 결과/오류 기록
 - 관리자 로그인 세션, HttpOnly/Secure/SameSite 쿠키, CSRF 방어, 입력 검증, 수집 요청 제한
 - Cloudflare D1 SQLite 마이그레이션과 Wrangler 로컬 개발
@@ -120,9 +121,11 @@ npx.cmd wrangler pages secret put SESSION_SECRET --project-name jobradar-dashboa
 
 - `POST /api/auth/login`, `GET /api/auth/session`, `POST /api/auth/logout`
 - `GET /api/jobs`, `GET /api/jobs/:id`, `GET /api/jobs/deleted`
+- `POST /api/manual-jobs` (관리자 확인 후 입력, 맞춤 조건/HTTPS/중복/삭제 이력 검증)
 - `PATCH /api/jobs/:id/read`, `PATCH /api/jobs/:id/favorite`
 - `DELETE /api/jobs/:id`, `POST /api/jobs/bulk-delete`
 - `POST /api/jobs/:id/restore`, `POST /api/jobs/restore`
+- `POST /api/manual-jobs` (관리자 확인 후 입력, 맞춤 조건/HTTPS/중복/삭제 이력 검증)
 - `GET/PUT /api/preferences`
 - `POST /api/collections` (버튼 클릭 전용), `GET /api/collections`, `GET /api/collections/:id`
 - `GET /api/sites`, `GET /api/health`
@@ -169,7 +172,8 @@ Pages 프로젝트의 Git integration은 Wrangler 파일을 자동 설정 원본
 ## 현재 범위 및 제한
 
 - 관리 웹 UI와 REST API는 기능적으로 연결되어 있습니다. 실제 목록/상태/설정/이력은 D1을 사용합니다.
-- 외부 사이트를 실제 수집하지 않습니다. 따라서 실제 공고가 없을 때 게시판은 비어 있으며 성공을 꾸며내지 않습니다.
+- Cloudflare Worker는 Ego Browser 또는 사용자의 브라우저를 원격 제어할 수 없습니다. “공고 수집” 버튼은 맞춤 조건으로 검색 페이지 탭을 열 뿐 공고 상세를 자동 판독하지 않습니다. 사용자가 브라우저에서 직접 확인하고 입력한 공고만 `/api/manual-jobs`를 통해 저장합니다.
+- 외부 사이트의 백그라운드/자동 수집은 하지 않습니다. 공식 API/승인 없이 성공으로 기록하지 않으며, 실제 공고가 없을 때 가짜 공고를 생성하지 않습니다.
 - 관리자 인증은 단일 관리자 Credentials 기반입니다. 계정 생성/비밀번호 변경 UI와 이메일 복구는 미구현입니다.
 - API 요청 제한은 로그인된 수집 호출의 10초 cooldown과 입력 상한으로 구현했습니다. 로그인 엔드포인트의 분산 환경 IP별 고급 rate limit/WAF는 별도 운영 설정이 필요합니다.
 - 복구/삭제 관리 API는 관리자 인증과 CSRF를 요구합니다.

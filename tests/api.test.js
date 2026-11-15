@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import worker from '../src/worker.js';
 
 function fakeDb() {
-  const state = { sessions: new Map(), jobs: [], queries: [] };
+  const state = { sessions: new Map(), jobs: [], queries: [], preferences: { id: 1, industries_json: '["철강 제조업"]', companies_json: '[]', roles_json: '["품질관리"]', locations_json: '[]', career_level: '신입', updated_at: '2026-11-15T00:00:00Z' }, existingJob: null };
   return {
     state,
     prepare(sql) {
@@ -10,7 +10,9 @@ function fakeDb() {
         async first() {
           state.queries.push({ sql, values: this.values });
           if (sql.includes('FROM admin_sessions')) return state.sessions.get(this.values[0]) || null;
-          if (sql.includes('FROM preferences')) return { id: 1, industries_json: '[]', companies_json: '[]', roles_json: '[]', locations_json: '[]', industries: [], companies: [], roles: [], locations: [], career_level: '신입', updated_at: '2026-11-15T00:00:00Z' };
+          if (sql.includes('FROM preferences')) return state.preferences;
+          if (sql.includes('SELECT id, is_deleted FROM jobs WHERE source_site = ? AND source_job_id = ?')) return state.existingJob;
+          if (sql.includes('SELECT id, is_deleted FROM jobs WHERE source_site = ? AND canonical_url = ?')) return state.existingJob;
           if (sql.includes('SELECT COUNT(*) AS total FROM jobs')) { state.queries.push({ sql, values: this.values }); return { total: 0 }; }
           if (sql.includes('COUNT(*) AS total FROM collection_runs')) return { total: 0 };
           return null;
@@ -19,6 +21,7 @@ function fakeDb() {
         async run() {
           state.queries.push({ sql, values: this.values });
           if (sql.includes('INSERT INTO admin_sessions')) state.sessions.set(this.values[0], { token_hash: this.values[0], csrf_token: this.values[1], expires_at: this.values[2] });
+          if (sql.includes('INSERT OR IGNORE INTO jobs')) state.jobs.push({ source_site: this.values[0], canonical_url: this.values[2], company_name: this.values[3], job_title: this.values[4] });
           return { meta: { changes: 1 } };
         },
       }; return statement;
@@ -61,6 +64,25 @@ describe('Worker API authentication and routes', () => {
     expect(invalidLocations.status).toBe(400);
     const invalid = await worker.fetch(new Request('https://jobradar.test/api/preferences', { method: 'PUT', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ industries: [], companies: [], roles: [], career_level: '관리자' }) }), { ...baseEnv, DB: db });
     expect(invalid.status).toBe(400);
+  });
+
+  it('saves a manually reviewed job only with admin CSRF, HTTPS, and matching preferences', async () => {
+    const responseAnonymous = await worker.fetch(new Request('https://jobradar.test/api/manual-jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }), { ...baseEnv, DB: db });
+    expect(responseAnonymous.status).toBe(401);
+    const { cookie, csrf } = await login();
+    const payload = { source_site: 'jobkorea', source_job_id: null, company_name: '한빛철강', job_title: '품질관리 신입', industry: '철강 제조업', career_requirement: '신입', education_requirement: '초대졸 이상', employment_type: '정규직', work_location: '충남 천안', salary: '연봉 3,800만원', deadline: '2026-12-31', original_url: 'https://www.jobkorea.co.kr/Recruit/GI_Read/123456' };
+    const noCsrf = await worker.fetch(new Request('https://jobradar.test/api/manual-jobs', { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }), { ...baseEnv, DB: db });
+    expect(noCsrf.status).toBe(403);
+    const saved = await worker.fetch(new Request('https://jobradar.test/api/manual-jobs', { method: 'POST', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }), { ...baseEnv, DB: db });
+    expect(saved.status).toBe(201);
+    expect(db.state.jobs).toHaveLength(1);
+    const insecure = await worker.fetch(new Request('https://jobradar.test/api/manual-jobs', { method: 'POST', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, original_url: 'http://www.jobkorea.co.kr/job' }) }), { ...baseEnv, DB: db });
+    expect(insecure.status).toBe(400);
+    const mismatch = await worker.fetch(new Request('https://jobradar.test/api/manual-jobs', { method: 'POST', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, job_title: '해외영업', industry: '서비스' }) }), { ...baseEnv, DB: db });
+    expect(mismatch.status).toBe(422);
+    db.state.existingJob = { id: 5, is_deleted: 1 };
+    const deleted = await worker.fetch(new Request('https://jobradar.test/api/manual-jobs', { method: 'POST', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }), { ...baseEnv, DB: db });
+    expect(deleted.status).toBe(409);
   });
 
   it('manual collection records four real unconnected adapter results and does not fake jobs', async () => {

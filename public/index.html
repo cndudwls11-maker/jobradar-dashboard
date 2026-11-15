@@ -51,8 +51,9 @@
       <div class="content-wrap">
         <section id="view-all" class="view">
           <div class="page-heading"><div><p class="eyebrow">JOB BOARD</p><h1 id="page-title">전체 채용공고</h1><p class="page-description">관심 있는 채용공고를 한곳에서 관리하세요.</p></div>
-            <button id="collect-button" class="button primary collect-button"><span aria-hidden="true">↻</span> <span id="collect-label">공고 수집</span></button>
+            <div class="heading-actions"><button id="manual-job-button" class="button secondary">+ 브라우저 확인 공고 등록</button><button id="collect-button" class="button primary collect-button"><span aria-hidden="true">↻</span> <span id="collect-label">공고 수집</span></button></div>
           </div>
+          <p class="page-description collection-help">저장 조건으로 사이트 검색 탭을 엽니다. 각 공고 상세의 접수 상태와 정보를 직접 확인한 뒤, ‘브라우저 확인 공고 등록’에서 저장해주세요. 브라우저 페이지를 자동 판독하지 않습니다.</p>
           <div id="site-notice" class="notice notice-info" hidden></div>
           <div class="board-toolbar">
             <div class="search-box"><span aria-hidden="true">⌕</span><input id="search-input" type="search" placeholder="회사명, 직무, 키워드 검색" aria-label="채용공고 검색"><kbd>Enter</kbd></div>
@@ -99,6 +100,7 @@
     </main>
   </div>
   <div id="toast-region" class="toast-region" aria-live="polite"></div>
+  <dialog id="manual-job-dialog" class="manual-job-dialog"><form id="manual-job-form"><div class="dialog-heading"><div><p class="eyebrow">MANUAL REVIEW</p><h2>브라우저 확인 공고 등록</h2></div><button type="button" id="manual-job-close" class="icon-button" aria-label="닫기">×</button></div><p class="dialog-description">Ego Browser 등에서 공고 상세를 직접 확인하고 입력하세요. 현재 페이지의 내용과 접수 중 여부를 확인한 항목만 저장합니다. 사이트를 자동으로 읽거나 접근 제한을 우회하지 않습니다.</p><div class="manual-job-grid"><label>채용 사이트<select name="source_site" required><option value="saramin">사람인</option><option value="jobkorea">잡코리아</option><option value="incruit">인크루트</option><option value="jasoseol">자소설닷컴</option></select></label><label>회사명<input name="company_name" maxlength="300" required></label><label class="span-2">공고 제목 / 직무<input name="job_title" maxlength="500" required></label><label>산업<input name="industry" maxlength="200" placeholder="확인된 경우 입력"></label><label>경력 요건<input name="career_requirement" maxlength="200"></label><label>학력 요건<input name="education_requirement" maxlength="200"></label><label>근무형태<input name="employment_type" maxlength="100"></label><label>근무지역<input name="work_location" maxlength="300"></label><label>급여<input name="salary" maxlength="200" placeholder="예: 연봉 3,800만원"></label><label>마감일<input name="deadline" type="date"></label><label class="span-2">원문 URL<input name="original_url" type="url" placeholder="https://..." maxlength="2048" required></label></div><div id="manual-job-error" class="form-error" role="alert"></div><div class="dialog-actions"><button type="button" id="manual-job-cancel" class="button secondary">취소</button><button type="submit" id="manual-job-submit" class="button primary">확인한 공고 저장</button></div></form></dialog>
   <dialog id="confirm-dialog" class="confirm-dialog"><form method="dialog"><h2 id="confirm-title">삭제 확인</h2><p id="confirm-message"></p><div class="dialog-actions"><button value="cancel" class="button secondary">취소</button><button id="confirm-accept" value="confirm" class="button danger">삭제 확인</button></div></form></dialog>
 </body>
 </html>

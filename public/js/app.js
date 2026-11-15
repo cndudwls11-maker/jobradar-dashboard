@@ -26,6 +26,10 @@ function bindEvents() {
   $('#menu-toggle').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
   window.addEventListener('hashchange', enterRoute);
   $('#collect-button').addEventListener('click', runCollection);
+  $('#manual-job-button').addEventListener('click', openManualJobDialog);
+  $('#manual-job-form').addEventListener('submit', saveManualJob);
+  $('#manual-job-cancel').addEventListener('click', () => $('#manual-job-dialog').close());
+  $('#manual-job-close').addEventListener('click', () => $('#manual-job-dialog').close());
   $('#retry-load').addEventListener('click', loadJobs);
   $('#search-input').addEventListener('input', () => { clearTimeout(state.searchTimer); state.searchTimer = setTimeout(() => { state.page = 1; loadJobs(); }, 300); });
   $('#search-input').addEventListener('keydown', (event) => { if (event.key === 'Enter') { clearTimeout(state.searchTimer); state.page = 1; loadJobs(); } });
@@ -204,18 +208,74 @@ async function runCollection() {
   if (button.disabled) return;
   button.disabled = true; label.textContent = '공고 수집 중...';
   try {
-    const result = await api.collect();
-    label.textContent = '수집 완료';
-    const sitesFailed = result.sites.filter((site) => site.status === 'failed').length;
-    const sitesNotConnected = result.sites.filter((site) => site.status === 'unconnected').length;
-    const message = `공고 수집 완료\n신규 공고: ${result.newCount}건\n중복 공고: ${result.duplicateCount}건\n삭제 이력으로 제외된 공고: ${result.deletedExcludedCount}건\n제외된 공고: ${result.excludedCount}건\n수집 실패 사이트: ${sitesFailed}개\n미연결 사이트: ${sitesNotConnected}개`;
-    window.alert(message);
-    if (result.noResultsHint) toast(result.noResultsHint);
-    await loadJobs();
+    const preferences = await api.preferences();
+    const queryTerms = [...preferences.industries, ...preferences.companies, ...preferences.roles, ...preferences.locations]
+      .map((item) => item.trim()).filter(Boolean);
+    const query = queryTerms.join(' ');
+    if (!query) {
+      label.textContent = '공고 수집';
+      toast('맞춤 채용 조건에 산업·기업·직무·선호지역 중 검색할 항목을 먼저 입력해주세요.', 'error');
+      return;
+    }
+    const opened = openSearchTabs(query);
+    label.textContent = '검색 페이지 열림';
+    window.alert(`저장된 조건으로 채용 사이트 검색 페이지를 열었습니다.\n검색어: ${query}\n\n브라우저에서 공고 상세와 접수 상태를 직접 확인해주세요. 실제 접수 중이고 조건에 맞는 공고는 ‘브라우저 확인 공고 등록’에서 직접 입력해 D1에 저장할 수 있습니다.\n\n열린 검색 탭: ${opened}개\n자동 페이지 판독이나 수집은 하지 않습니다.`);
+    toast('새 탭의 공고를 직접 확인하세요. 확인된 항목은 브라우저 확인 공고 등록에서 저장할 수 있습니다.');
   } catch (error) {
     label.textContent = '공고 수집'; toast(`수집 오류: ${error.message}`, 'error');
   } finally {
     window.setTimeout(() => { button.disabled = false; label.textContent = '공고 수집'; }, 2500);
+  }
+}
+
+function openSearchTabs(query) {
+  const encoded = encodeURIComponent(query);
+  const urls = [
+    `https://www.saramin.co.kr/zf_user/search/recruit?searchword=${encoded}`,
+    `https://www.jobkorea.co.kr/Search/?stext=${encoded}`,
+    `https://search.incruit.com/list/search.asp?col=job&kw=${encoded}`,
+    'https://jasoseol.com/recruit',
+  ];
+  let opened = 0;
+  for (const url of urls) {
+    const tab = window.open(url, '_blank', 'noopener,noreferrer');
+    if (tab) opened += 1;
+  }
+  if (opened === 0) throw new Error('브라우저에서 새 탭 열기가 차단되었습니다. 팝업을 허용한 뒤 다시 눌러주세요.');
+  return opened;
+}
+
+function openManualJobDialog() {
+  $('#manual-job-form').reset();
+  $('#manual-job-error').textContent = '';
+  $('#manual-job-dialog').showModal();
+}
+
+async function saveManualJob(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form).entries());
+  const payload = {
+    ...values,
+    source_job_id: null,
+    published_at: null,
+    collected_at: new Date().toISOString(),
+    deadline: values.deadline || null,
+  };
+  const submit = $('#manual-job-submit');
+  const error = $('#manual-job-error');
+  submit.disabled = true;
+  error.textContent = '';
+  try {
+    await api.createManualJob(payload);
+    $('#manual-job-dialog').close();
+    toast('브라우저에서 확인한 공고를 게시판에 등록했습니다.');
+    state.page = 1;
+    await loadJobs();
+  } catch (failure) {
+    error.textContent = failure.message;
+  } finally {
+    submit.disabled = false;
   }
 }
 

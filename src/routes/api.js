@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { requireAdmin, login, logout, sessionInfo } from '../services/auth.js';
-import { CAREER_LEVELS, SITES, parseList } from '../services/validation.js';
+import { CAREER_LEVELS, SITES, parseList, validateManualJob } from '../services/validation.js';
 import { collectAll } from '../collectors/index.js';
 import { matchesPreferences, persistNewJob } from '../collectors/common.js';
 
@@ -14,6 +14,8 @@ api.post('/auth/logout', requireAdmin, logout);
 
 api.use('/jobs', requireAdmin);
 api.use('/jobs/*', requireAdmin);
+api.use('/manual-jobs', requireAdmin);
+api.use('/manual-jobs/*', requireAdmin);
 api.use('/preferences', requireAdmin);
 api.use('/preferences/*', requireAdmin);
 api.use('/collections', requireAdmin);
@@ -76,6 +78,24 @@ api.get('/jobs/:id', async (c) => {
   if (!id) return c.json({ error: '공고 ID가 올바르지 않습니다.' }, 400);
   const job = await c.env.DB.prepare('SELECT * FROM jobs WHERE id = ?').bind(id).first();
   return job ? c.json(formatJob(job)) : c.json({ error: '공고를 찾을 수 없습니다.' }, 404);
+});
+
+api.post('/manual-jobs', async (c) => {
+  let body;
+  try { body = await c.req.json(); } catch { return c.json({ error: '요청 JSON이 올바르지 않습니다.' }, 400); }
+  let job;
+  try { job = validateManualJob(body); } catch (error) { return c.json({ error: error.message }, 400); }
+  const prefs = await getPreferences(c.env.DB);
+  if (!matchesPreferences(job, prefs)) return c.json({ error: '공고가 현재 맞춤 조건에 맞지 않습니다. 조건을 변경하거나 내용을 확인하세요.' }, 422);
+  let result;
+  try { result = await persistNewJob(c.env.DB, job); }
+  catch (error) {
+    if (String(error?.message || '').includes('UNIQUE constraint')) return c.json({ error: '같은 사이트 공고 ID 또는 원문 URL이 이미 등록되어 있습니다.' }, 409);
+    throw error;
+  }
+  if (result.kind === 'deleted') return c.json({ error: '이 공고는 삭제 이력에 있어 다시 등록하지 않았습니다.' }, 409);
+  if (result.kind === 'duplicate') return c.json({ error: '같은 사이트의 공고 URL이 이미 등록되어 있습니다.' }, 409);
+  return c.json({ ok: true, id: result.id, message: '브라우저에서 확인한 공고를 저장했습니다.' }, 201);
 });
 
 api.patch('/jobs/:id/read', async (c) => setJobFlag(c, 'is_read'));

@@ -37,6 +37,12 @@ export function validateJob(job) {
   };
 }
 
+export function validateManualJob(input) {
+  const job = validateJob(input);
+  if (!job.company_name || !job.job_title) throw new Error('회사명과 공고 제목은 필수입니다.');
+  return job;
+}
+
 function clean(value, max) {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value !== 'string' && typeof value !== 'number') throw new Error('문자열 필드가 올바르지 않습니다.');
