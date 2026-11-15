@@ -147,12 +147,12 @@ robots.txt 허용만으로 저작권·이용약관상 수집 및 재게시 권�
 Cloudflare 배포는 이 개발 작업에서 실행하지 않았습니다. Pages 프로젝트 설정은 다음처럼 설정합니다.
 
 - Framework preset: `None` (정적 파일 프로젝트)
-- Build command: 빈칸 (별도 빌드 단계 없음)
+- Build command: `npm ci` (Pages Functions의 Hono 의존성 설치)
 - Build output directory: `public`
 - Root directory: 저장소 루트(`/` 또는 빈칸)
 - Production branch: `main`
 
-Pages 프로젝트 설정 API에서 Git 연동 프로젝트의 build output directory를 `public`으로 설정했고, Production 브랜치 `main`과 기존 저장소 연결을 유지했습니다.
+Pages 프로젝트의 Git integration은 Wrangler 파일을 자동 설정 원본으로 사용하지 않으므로 Dashboard Build settings도 함께 맞춰야 합니다. 현재 build command를 `npm ci`, output directory를 `public`으로 설정했고, Production 브랜치 `main`과 기존 저장소 연결을 유지했습니다.
 
 `functions/api/[[path]].js`는 `/api/*` 요청을 Hono Worker API로 넘깁니다. Pages Dashboard의 D1 binding에서 binding name `DB`를 사용자가 생성한 새 `jobradar-db`에 연결하고, production/preview 환경 중 실제 사용할 환경을 선택해야 합니다. Wrangler 설정을 Pages에서 사용하도록 적용할 때는 D1 ID placeholder도 교체해야 합니다.
 
