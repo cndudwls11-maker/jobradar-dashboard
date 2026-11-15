@@ -60,6 +60,7 @@ function bindEvents() {
   $('#industry-options').addEventListener('click', onPreferenceChip);
   $('#role-options').addEventListener('click', onPreferenceChip);
   $('#location-options').addEventListener('click', onPreferenceChip);
+  $('#industry-chips').addEventListener('click', onRemoveChip);
   $('#company-chips').addEventListener('click', onRemoveChip);
   $('#role-chips').addEventListener('click', onRemoveChip);
   $('#location-chips').addEventListener('click', onRemoveChip);
@@ -287,6 +288,7 @@ function renderPreferenceOptions() {
   $('#location-options').innerHTML = `<button type="button" class="choice-chip ${allSelected ? 'selected' : ''}" data-kind="locations" data-value="${escapeHtml(ALL_LOCATIONS)}">${escapeHtml(ALL_LOCATIONS)}</button>${LOCATIONS.map((name) => `<button type="button" class="choice-chip ${state.preferences.locations.includes(name) ? 'selected' : ''}" data-kind="locations" data-value="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('')}`;
 }
 function renderCustomChips() {
+  $('#industry-chips').innerHTML = state.preferences.industries.filter((name) => !INDUSTRIES.includes(name)).map((name) => customChip(name, 'industries')).join('');
   $('#company-chips').innerHTML = state.preferences.companies.map((name) => customChip(name, 'companies')).join('');
   $('#role-chips').innerHTML = state.preferences.roles.filter((name) => !ROLES.includes(name)).map((name) => customChip(name, 'roles')).join('');
   $('#location-chips').innerHTML = state.preferences.locations.filter((name) => !LOCATIONS.includes(name)).map((name) => customChip(name, 'locations')).join('');
