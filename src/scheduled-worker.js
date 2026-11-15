@@ -3,6 +3,8 @@ import { matchesPreferences, persistNewJob } from './collectors/common.js';
 import { validateJob } from './services/validation.js';
 
 export async function runScheduledCollection(env) {
+  const SITE_MAX = 10;
+  const GLOBAL_MAX = 30;
   const db = env.DB;
   const prefs = await getPreferences(db);
   const runId = crypto.randomUUID();
@@ -17,12 +19,14 @@ export async function runScheduledCollection(env) {
   const sites = [];
 
   for (const result of results) {
+    let siteAccepted = 0;
     let siteNew = 0;
     let siteDuplicate = 0;
     let siteDeleted = 0;
     let siteExcluded = 0;
     if (result.status === 'failed') errorCount += 1;
     for (const raw of result.jobs || []) {
+      if (siteAccepted >= SITE_MAX) { siteExcluded += 1; excludedCount += 1; continue; }
       try {
         const job = validateJob(raw);
         if (!matchesPreferences(job, prefs)) {
@@ -31,9 +35,12 @@ export async function runScheduledCollection(env) {
           continue;
         }
         const stored = await persistNewJob(db, job);
-        if (stored.kind === 'new') { newCount += 1; siteNew += 1; }
+        if (stored.kind === 'new') {
+          if (siteNew >= SITE_MAX || (newCount + duplicateCount + deletedExcludedCount + excludedCount) >= GLOBAL_MAX) { excludedCount += 1; siteExcluded += 1; continue; }
+          newCount += 1; siteNew += 1; siteAccepted += 1;
+        }
         else if (stored.kind === 'deleted') { deletedExcludedCount += 1; siteDeleted += 1; }
-        else { duplicateCount += 1; siteDuplicate += 1; }
+        else { duplicateCount += 1; siteDuplicate += 1; siteAccepted += 1; }
       } catch (error) {
         errorCount += 1;
         result.error = [result.error, error instanceof Error ? error.message : '공고 처리 오류'].filter(Boolean).join(' | ');
