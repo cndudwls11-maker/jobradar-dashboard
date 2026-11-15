@@ -11,4 +11,5 @@ tmp/
 coverage/
 dist/
 dev-server.log
+manual-flow.log
 dev-server.err.logmanual-flow.log
