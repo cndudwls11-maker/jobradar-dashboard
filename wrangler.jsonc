@@ -7,7 +7,7 @@
     {
       "binding": "DB",
       "database_name": "jobradar-db",
-      "database_id": "REPLACE_AFTER_CREATING_A_NEW_JOBRADAR_D1",
+      "database_id": "f9300b4a-b6e2-4be8-90b9-bf870aa6f02e",
       "migrations_dir": "migrations"
     }
   ],

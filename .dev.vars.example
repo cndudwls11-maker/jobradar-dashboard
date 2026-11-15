@@ -2,5 +2,6 @@
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=replace-with-a-long-unique-password
 SESSION_SECRET=replace-with-at-least-32-random-characters
+# Pages production needs these as Worker/Pages secrets after the account owner sets them.
 # Optional: Saramin API key only after applying for and receiving official approval.
 SARAMIN_API_KEY=

@@ -77,18 +77,18 @@ npx.cmd wrangler d1 execute jobradar-db --local --command "SELECT name FROM sqli
 
 Vitest는 입력 정규화/검증, URL 중복 기준, OR/AND 수집 조건, 논리 삭제 공고 재수집 방지, 수집기별 미연결 결과, 인증/CSRF, 조건 저장, 실제 수집 이력의 미연결 기록을 테스트합니다. 현재 13개 테스트가 통과합니다.
 
-## D1 생성 및 마이그레이션 (배포 전 사용자 수행)
+## D1 생성 및 마이그레이션
 
-1. Cloudflare Dashboard에서 **새 D1 데이터베이스**를 직접 생성합니다. 기존 DB는 사용하지 않습니다.
-2. 신규 DB 이름을 `jobradar-db`로 지정하고 새 ID를 복사합니다.
-3. `wrangler.jsonc`의 `database_id`를 새 ID로 교체합니다. 이 프로젝트의 Pages Functions는 `functions/api/[[path]].js`에서 API를 처리하고, Pages binding은 이 Wrangler 구성 파일을 기준으로 합니다.
-4. 새 DB에 마이그레이션을 적용합니다.
+1. 이 프로젝트에서는 새 D1 `jobradar-db`를 생성했고 초기 마이그레이션도 적용했습니다. 생성 ID는 `f9300b4a-b6e2-4be8-90b9-bf870aa6f02e`입니다. 다른 Cloudflare 계정으로 옮길 경우 그 계정에서 새 DB를 만들고 ID를 교체하세요.
+2. `wrangler.jsonc`의 D1 binding 이름은 `DB`입니다. Pages Functions의 Production과 Preview에 이 바인딩이 적용되는지 Dashboard > Settings > Bindings에서 확인하세요.
+3. 이 프로젝트의 Pages Functions는 `functions/api/[[path]].js`에서 API를 처리합니다. Pages Functions 배포에 Wrangler 설정을 사용하면 `wrangler.jsonc`가 설정 원본입니다.
+4. 새 DB를 다른 계정에 만든 경우에만 해당 새 DB에 마이그레이션을 적용합니다.
 
 ```powershell
-npx.cmd wrangler d1 migrations apply jobradar-db --remote
+npx.cmd wrangler d1 migrations apply jobradar-db --remote --config wrangler.jsonc
 ```
 
-이 프로젝트 개발 작업에서는 이 원격 명령을 실행하지 않았습니다. 개인 계정에서 직접 실행하기 전에 DB 이름/ID를 재확인하세요.
+현재 연결된 개인 계정에는 신규 DB와 마이그레이션이 적용되어 있습니다. 다른 계정에서 위 명령을 실행하기 전에 DB 이름/ID를 재확인하세요.
 
 ### 테이블
 
@@ -103,12 +103,12 @@ npx.cmd wrangler d1 migrations apply jobradar-db --remote
 
 로컬: `.dev.vars`에서 `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET` 설정. 운영 전에는 긴 무작위 비밀번호와 32자 이상의 별도 비밀키를 사용합니다.
 
-Cloudflare에 배포할 때 사용자가 직접 Worker secret을 설정합니다.
+이 프로젝트의 Pages Production/Preview용 Secrets는 Pages 프로젝트의 **Settings → Variables and Secrets**에서 설정합니다. Wrangler Worker 명령 `secret put`은 별도 Worker용이므로 Pages 프로젝트에 설정하는 것과 혼동하지 마세요.
 
 ```powershell
-npx.cmd wrangler secret put ADMIN_USERNAME
-npx.cmd wrangler secret put ADMIN_PASSWORD
-npx.cmd wrangler secret put SESSION_SECRET
+npx.cmd wrangler pages secret put ADMIN_USERNAME --project-name jobradar-dashboard
+npx.cmd wrangler pages secret put ADMIN_PASSWORD --project-name jobradar-dashboard
+npx.cmd wrangler pages secret put SESSION_SECRET --project-name jobradar-dashboard
 ```
 
 입력 값은 소스, 프론트엔드, 저장소에 넣지 않습니다. 사람인 API 키도 공식 승인을 받아 발급된 경우에 한하여 Cloudflare Secret으로 관리해야 합니다.
