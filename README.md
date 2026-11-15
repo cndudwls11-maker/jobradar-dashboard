@@ -104,7 +104,7 @@ npx.cmd wrangler d1 migrations apply jobradar-preview-db --remote --config wrang
 
 로컬: `.dev.vars`에서 `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET` 설정. 운영 전에는 긴 무작위 비밀번호와 32자 이상의 별도 비밀키를 사용합니다.
 
-이 프로젝트의 Pages Production/Preview용 Secrets는 Pages 프로젝트의 **Settings → Variables and Secrets**에서 설정합니다. Wrangler Worker 명령 `secret put`은 별도 Worker용이므로 Pages 프로젝트에 설정하는 것과 혼동하지 마세요.
+이 프로젝트의 Pages Production/Preview용 Secrets는 Pages 프로젝트의 **Settings → Variables and Secrets**에서 설정합니다. Wrangler Worker 명령 `secret put`은 별도 Worker용이므로 Pages 프로젝트에 설정하는 것과 혼동하지 마세요. Production 관리자 아이디/비밀번호는 Cloudflare Pages encrypted Secrets로 관리하고 저장소에는 포함하지 않습니다.
 
 ```powershell
 npx.cmd wrangler pages secret put ADMIN_USERNAME --project-name jobradar-dashboard
