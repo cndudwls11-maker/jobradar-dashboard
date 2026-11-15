@@ -1,5 +1,6 @@
 import { api } from './api.js';
 import { $, $$, confirmDialog, deadlineLabel, display, escapeHtml, formatDate, toast } from './ui.js';
+import { ALL_LOCATIONS, togglePreferredLocation } from './preferences.js';
 
 const state = { route: 'all', page: 1, deletedPage: 1, totalPages: 1, deletedPages: 1, jobs: [], deleted: [], selected: new Set(), deletedSelected: new Set(), mode: 'all', preferences: { industries: [], companies: [], roles: [], locations: [], career_level: '신입' }, searchTimer: null, loading: false, requestId: 0 };
 const INDUSTRIES = ['금속 제조업','철강 제조업','비철금속 제조업','반도체 제조업','자동차 부품 제조업'];
@@ -225,7 +226,8 @@ async function loadPreferences() {
 function renderPreferenceOptions() {
   $('#industry-options').innerHTML = INDUSTRIES.map((name) => `<button type="button" class="choice-chip ${state.preferences.industries.includes(name) ? 'selected' : ''}" data-kind="industries" data-value="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('');
   $('#role-options').innerHTML = ROLES.map((name) => `<button type="button" class="choice-chip ${state.preferences.roles.includes(name) ? 'selected' : ''}" data-kind="roles" data-value="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('');
-  $('#location-options').innerHTML = LOCATIONS.map((name) => `<button type="button" class="choice-chip ${state.preferences.locations.includes(name) ? 'selected' : ''}" data-kind="locations" data-value="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('');
+  const allSelected = state.preferences.locations.length === 0;
+  $('#location-options').innerHTML = `<button type="button" class="choice-chip ${allSelected ? 'selected' : ''}" data-kind="locations" data-value="${escapeHtml(ALL_LOCATIONS)}">${escapeHtml(ALL_LOCATIONS)}</button>${LOCATIONS.map((name) => `<button type="button" class="choice-chip ${state.preferences.locations.includes(name) ? 'selected' : ''}" data-kind="locations" data-value="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('')}`;
 }
 function renderCustomChips() {
   $('#company-chips').innerHTML = state.preferences.companies.map((name) => customChip(name, 'companies')).join('');
@@ -236,7 +238,11 @@ function customChip(name, kind) { return `<span class="custom-chip">${escapeHtml
 function onPreferenceChip(event) {
   const button = event.target.closest('[data-kind]'); if (!button) return;
   const { kind, value } = button.dataset; const list = state.preferences[kind];
-  state.preferences[kind] = list.includes(value) ? list.filter((item) => item !== value) : [...list, value]; renderPreferenceOptions(); renderCustomChips();
+  if (kind === 'locations') state.preferences.locations = togglePreferredLocation(list, value);
+  else {
+    state.preferences[kind] = list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
+  }
+  renderPreferenceOptions(); renderCustomChips();
 }
 function onRemoveChip(event) {
   const button = event.target.closest('[data-remove]'); if (!button) return;
