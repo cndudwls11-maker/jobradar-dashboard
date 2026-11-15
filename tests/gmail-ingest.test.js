@@ -62,6 +62,13 @@ describe('Apps Script Gmail alert extraction', () => {
     expect(h.props.get('JOBRADAR_ACKED_MESSAGE_IDS')).toContain('m-1');
   });
 
+  it('extracts the actual Google Alerts snippet after a publisher anchor without href', () => {
+    const h = harness();
+    const html = '<td><a href="https://www.google.com/url?url=https%3A%2F%2Fm.jobkorea.co.kr%2FRecruit%2FGI_Read%2F48951021">품질관리 채용</a><div><a style="color:gray">잡코리아</a></div><div>경력: 경력 8년 이상, 급여: 회사 내규에 따름, 마감일: 2026-06-08.</div><table><tr><td><a href="https://www.google.com/alerts/share">공유</a></td></tr></table></td>';
+    expect(h.context.parseAlertHtml_(html)[0].summary).toContain('경력: 경력 8년 이상');
+    expect(h.context.parseAlertHtml_(html)[0].summary).toContain('2026-06-08');
+  });
+
   it('sends empty jobs for no-link message but does not complete after endpoint error', () => {
     const noLink = thread([msg('no-links', '<html><p>Google Alerts: no results found.</p></html>')]);
     const h = harness({ threads: [noLink], fetchStatus: 503, fetchBody: 'unavailable' });

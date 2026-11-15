@@ -100,7 +100,8 @@ function unwrapGoogleUrl_(href) {
 function nearbySummary_(html, start, end, anchorInner) {
   var after = html.slice(end, Math.min(html.length, end + 1400));
   // Google Alerts snippets normally appear in adjacent table cells or result divs.
-  var summary = cleanHtmlText_(after.replace(/^\s*(?:<\/[^>]+>\s*)*/, '').split(/<a\b/i)[0]);
+  var snippetArea = after.split(/<table\b|<a\b[^>]*\bhref\s*=/i)[0].replace(/<a\b[^>]*>[\s\S]*?<\/a\s*>/gi, ' ');
+  var summary = cleanHtmlText_(snippetArea.replace(/^\s*(?:<\/[^>]+>\s*)*/, ''));
   if (!summary || summary.length < 12) {
     var before = html.slice(Math.max(0, start - 800), start);
     var chunks = before.match(/<(?:div|font|span)\b[^>]*>[\s\S]*?<\/(?:div|font|span)>/gi) || [];

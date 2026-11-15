@@ -45,7 +45,9 @@ export function parseAlertEntry(entry, receivedAt, prefs) {
   const detail = identifyDetail(entry.original_url, title, summary);
   if (!title || !detail) return null;
   const text = `${title} ${summary}`;
-  const career = text.match(/(?:경력\s*[:：]\s*)?(신입\s*[·/ㆍ,]\s*경력|신입\s*및\s*경력|경력\s*무관|신입|경력\s*\d+\s*년\s*이상|경력)/)?.[1]?.replace(/\s+/g, ' ').trim() || null;
+  const careerField = text.match(/경력\s*[:：]\s*([^,;|]{1,45})/)?.[1] || '';
+  const careerText = careerField ? (/(?:신입.*경력|경력.*신입)/.test(summary) ? summary : careerField) : summary;
+  const career = /신입.*경력|경력.*신입/.test(careerText) ? '신입/경력' : careerText.match(/(신입\s*[·/ㆍ,]\s*경력|신입\s*및\s*경력|경력\s*무관|무관|신입|경력\s*\d+\s*년\s*이상|경력)/)?.[1]?.replace(/\s+/g, ' ').trim() || null;
   const deadlineMatch = text.match(/(?:마감일|접수마감|마감)\s*[:：]\s*(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
   let deadline = null;
   if (deadlineMatch) {
@@ -54,12 +56,9 @@ export function parseAlertEntry(entry, receivedAt, prefs) {
     if (!Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === iso) deadline = iso;
   }
   const location = text.match(/(?:근무지|근무지역|지역)\s*[:：]\s*([^|,;\n]{2,50})/)?.[1]?.trim() || null;
-  const company = title.match(/^\[([^\]]{2,80})\]\s*(?:.+채용|.+모집)/)?.[1] || title.match(/^(.{2,80}?)\s+[-–]\s+.+(?:채용|모집)/)?.[1] || null;
-  const roles = parseArray(prefs.roles_json);
+  const company = title.match(/^\[([^\]]{2,80})\]\s*(?:.+채용|.+모집)/)?.[1] || title.match(/^(.{2,80}?)\s+[-–:]\s+.+(?:채용|모집)/)?.[1]?.replace(/\s+채용$/, '') || null;
   const locations = parseArray(prefs.locations_json);
-  const roleTerms = roles.flatMap(role => /품질관리|QC/i.test(role) ? [role, '품질관리', '품질 관리', '품질검사', 'QC'] : /품질보증|QA/i.test(role) ? [role, '품질보증', '품질 보증', 'QA'] : [role]);
-  const roleMatch = !roles.length || roleTerms.some(term => text.toLowerCase().includes(term.toLowerCase()));
-  const careerMismatch = prefs.career_level === '신입' && career && /경력/.test(career) && !/신입|무관/.test(career);
+  const careerMismatch = prefs.career_level === '신입' && career && /경력/.test(career) && !/신입|무관/.test(career) && !/신입/.test(summary);
   const locationMismatch = location && locations.length && !locations.some(item => location.includes(item));
   if (careerMismatch || locationMismatch) return { excluded: true, site: detail.site };
   return {
@@ -88,6 +87,8 @@ export async function ingestEmail(db, body) {
         parsed.site === 'saramin' ? `%rec_idx=${parsed.job.source_job_id}&%` : `%/${parsed.job.source_job_id}?%`,
         parsed.site === 'saramin' ? `%rec_idx=${parsed.job.source_job_id}` : `%/${parsed.job.source_job_id}`).first();
     const saved = legacy ? { kind: legacy.is_deleted ? 'deleted' : 'duplicate' } : await persistNewJob(db, parsed.job);
+    if (legacy && !legacy.is_deleted) await db.prepare('UPDATE jobs SET company_name=COALESCE(company_name,?),career_requirement=COALESCE(career_requirement,?),deadline=COALESCE(deadline,?),work_location=COALESCE(work_location,?) WHERE id=?')
+      .bind(parsed.job.company_name, parsed.job.career_requirement, parsed.job.deadline, parsed.job.work_location, legacy.id).run();
     if (saved.kind === 'new') {
       await db.prepare('UPDATE jobs SET match_status=? WHERE source_site=? AND source_job_id=?').bind(parsed.job.match_status, parsed.site, parsed.job.source_job_id).run();
       platforms[parsed.site].newCount += 1;
