@@ -103,23 +103,13 @@ npx.cmd wrangler d1 migrations apply jobradar-preview-db --remote --config wrang
 
 공고의 재수집은 기존 행을 갱신하지 않습니다. 따라서 확인/즐겨찾기/삭제 상태가 보존되고, 삭제된 공고는 자동 복구되지 않습니다.
 
-## Secrets 및 관리자 계정
+## 공개 접근 및 Secrets
 
-로컬: `.dev.vars`에서 `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET` 설정. 운영 전에는 긴 무작위 비밀번호와 32자 이상의 별도 비밀키를 사용합니다.
-
-이 프로젝트의 Pages Production/Preview용 Secrets는 Pages 프로젝트의 **Settings → Variables and Secrets**에서 설정합니다. Wrangler Worker 명령 `secret put`은 별도 Worker용이므로 Pages 프로젝트에 설정하는 것과 혼동하지 마세요. Production 관리자 아이디/비밀번호는 Cloudflare Pages encrypted Secrets로 관리하고 저장소에는 포함하지 않습니다.
-
-```powershell
-npx.cmd wrangler pages secret put ADMIN_USERNAME --project-name jobradar-dashboard
-npx.cmd wrangler pages secret put ADMIN_PASSWORD --project-name jobradar-dashboard
-npx.cmd wrangler pages secret put SESSION_SECRET --project-name jobradar-dashboard
-```
-
-입력 값은 소스, 프론트엔드, 저장소에 넣지 않습니다. 사람인 API 키도 공식 승인을 받아 발급된 경우에 한하여 Cloudflare Secret으로 관리해야 합니다.
+로그인 없이 모든 방문자가 공고와 맞춤 조건을 조회·수정·삭제할 수 있습니다. 민감한 정보를 저장하지 마세요. 기존 메일 수집 및 예약 수집 연동은 각각 별도의 비밀 토큰을 계속 요구합니다. 브라우저의 다른 출처에서 보낸 변경 요청은 차단하지만 직접 API를 호출하는 방문자를 인증하거나 제한하지는 않습니다.
 
 ## API 개요
 
-모든 `/api/jobs`, `/api/manual-jobs`, `/api/preferences` 및 직접 수집 POST API는 관리자 세션이 필요합니다. POST/PUT/PATCH/DELETE에는 로그인 응답의 CSRF 토큰을 `X-CSRF-Token`으로 보냅니다. 예약 Worker는 Pages UI용 수집 이력 조회 API를 사용하지 않습니다.
+`/api/jobs`, `/api/manual-jobs`, `/api/preferences` 및 직접 수집 API는 로그인 없이 공개됩니다. 예약 수집과 메일 수집 API는 별도의 Bearer 토큰을 요구합니다.
 
 - `POST /api/auth/login`, `GET /api/auth/session`, `POST /api/auth/logout`
 - `GET /api/jobs`, `GET /api/jobs/:id`, `GET /api/jobs/deleted`

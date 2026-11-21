@@ -40,21 +40,37 @@ async function login() {
   return { cookie, csrf: payload.csrfToken };
 }
 
-describe('Worker API authentication and routes', () => {
-  it('requires an authenticated admin for listings and mutation APIs', async () => {
+describe('Worker API public routes', () => {
+  it('allows anonymous listings and mutations', async () => {
     const response = await worker.fetch(new Request('https://jobradar.test/api/jobs'), { ...baseEnv, DB: db });
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(200);
     const response2 = await worker.fetch(new Request('https://jobradar.test/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: '{}' }), { ...baseEnv, DB: db });
-    expect(response2.status).toBe(401);
+    expect(response2.status).toBe(400);
   });
 
-  it('does not accept a state-changing request without CSRF token', async () => {
+  it('accepts a state-changing request without CSRF token', async () => {
     const { cookie } = await login();
     const response = await worker.fetch(new Request('https://jobradar.test/api/preferences', { method: 'PUT', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify({ industries: [], companies: [], roles: [], career_level: '신입' }) }), { ...baseEnv, DB: db });
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(200);
   });
 
-  it('allows a same-origin CSRF-protected settings update and validates input', async () => {
+  it('rejects browser mutations from other origins without blocking same-origin visitors', async () => {
+    const body = JSON.stringify({ industries: [], companies: [], roles: [], career_level: '신입' });
+    const send = (headers) => worker.fetch(new Request('https://jobradar.test/api/preferences', { method: 'PUT', headers: { 'Content-Type': 'application/json', ...headers }, body }), { DB: db });
+    expect((await send({ Origin: 'https://other.example' })).status).toBe(403);
+    expect((await send({ 'Sec-Fetch-Site': 'cross-site' })).status).toBe(403);
+    expect((await send({ Origin: 'https://jobradar.test', 'Sec-Fetch-Site': 'same-origin' })).status).toBe(200);
+  });
+
+  it('allows anonymous delete and restore while keeping integrations protected', async () => {
+    const send = (path, method) => worker.fetch(new Request(`https://jobradar.test/api${path}`, { method }), { ...baseEnv, DB: db });
+    expect((await send('/jobs/1', 'DELETE')).status).toBe(200);
+    expect((await send('/jobs/1/restore', 'POST')).status).toBe(200);
+    expect((await send('/email-ingest', 'POST')).status).toBe(401);
+    expect((await send('/scheduled-collection', 'POST')).status).toBe(401);
+  });
+
+  it('allows a settings update and validates input', async () => {
     const { cookie, csrf } = await login();
     const response = await worker.fetch(new Request('https://jobradar.test/api/preferences', { method: 'PUT', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ industries: ['철강 제조업'], companies: [], roles: ['품질관리'], locations: ['충청남도','천안시'], career_level: '신입' }) }), { ...baseEnv, DB: db });
     expect(response.status).toBe(200);
@@ -66,14 +82,12 @@ describe('Worker API authentication and routes', () => {
     expect(invalid.status).toBe(400);
   });
 
-  it('saves a manually reviewed job only with admin CSRF, HTTPS, and matching preferences', async () => {
+  it('saves an anonymous manually reviewed job with HTTPS and matching preferences', async () => {
     const responseAnonymous = await worker.fetch(new Request('https://jobradar.test/api/manual-jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }), { ...baseEnv, DB: db });
-    expect(responseAnonymous.status).toBe(401);
+    expect(responseAnonymous.status).toBe(400);
     const { cookie, csrf } = await login();
     const payload = { source_site: 'jobkorea', source_job_id: null, company_name: '한빛철강', job_title: '품질관리 신입', industry: '철강 제조업', career_requirement: '신입', education_requirement: '초대졸 이상', employment_type: '정규직', work_location: '충남 천안', salary: '연봉 3,800만원', deadline: '2026-12-31', original_url: 'https://www.jobkorea.co.kr/Recruit/GI_Read/123456' };
-    const noCsrf = await worker.fetch(new Request('https://jobradar.test/api/manual-jobs', { method: 'POST', headers: { Cookie: cookie, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }), { ...baseEnv, DB: db });
-    expect(noCsrf.status).toBe(403);
-    const saved = await worker.fetch(new Request('https://jobradar.test/api/manual-jobs', { method: 'POST', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }), { ...baseEnv, DB: db });
+    const saved = await worker.fetch(new Request('https://jobradar.test/api/manual-jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }), { ...baseEnv, DB: db });
     expect(saved.status).toBe(201);
     expect(db.state.jobs).toHaveLength(1);
     const insecure = await worker.fetch(new Request('https://jobradar.test/api/manual-jobs', { method: 'POST', headers: { Cookie: cookie, 'X-CSRF-Token': csrf, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, original_url: 'http://www.jobkorea.co.kr/job' }) }), { ...baseEnv, DB: db });
@@ -122,6 +136,6 @@ describe('Worker API authentication and routes', () => {
     const healthy = await worker.fetch(new Request('https://jobradar.test/api/health'), { DB: db });
     expect((await healthy.json()).collectionMode).toBe('manual-only');
     const secured = await worker.fetch(new Request('https://jobradar.test/api/jobs'), { DB: db });
-    expect(secured.status).toBe(401);
+    expect(secured.status).toBe(200);
   });
 });

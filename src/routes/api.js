@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { requireAdmin, login, logout, sessionInfo } from '../services/auth.js';
+import { login, logout, sessionInfo } from '../services/auth.js';
 import { CAREER_LEVELS, SITES, parseList, validateManualJob } from '../services/validation.js';
 import { collectAll } from '../collectors/index.js';
 import { matchesPreferences, persistNewJob } from '../collectors/common.js';
@@ -10,8 +10,8 @@ const PAGE_SIZE = 25;
 const SITE_LABELS = { saramin: '사람인', jobkorea: '잡코리아', incruit: '인크루트', jasoseol: '자소설닷컴', linkareer: '링커리어' };
 
 api.post('/auth/login', login);
-api.get('/auth/session', requireAdmin, sessionInfo);
-api.post('/auth/logout', requireAdmin, logout);
+api.get('/auth/session', sessionInfo);
+api.post('/auth/logout', logout);
 
 api.post('/scheduled-collection', async (c) => {
   const expected = c.env.SCHEDULER_TOKEN;
@@ -32,15 +32,6 @@ api.post('/email-ingest', async (c) => {
     return c.json({ error: '저장하지 못했습니다. 다시 시도합니다.' }, 503);
   }
 });
-
-api.use('/jobs', requireAdmin);
-api.use('/jobs/*', requireAdmin);
-api.use('/manual-jobs', requireAdmin);
-api.use('/manual-jobs/*', requireAdmin);
-api.use('/preferences', requireAdmin);
-api.use('/preferences/*', requireAdmin);
-api.use('/collections', requireAdmin);
-api.use('/collections/*', requireAdmin);
 
 api.get('/jobs', async (c) => {
   const q = (c.req.query('q') || '').trim().slice(0, 200);

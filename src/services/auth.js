@@ -1,23 +1,6 @@
 const SESSION_SECONDS = 60 * 60 * 12;
 
 
-export async function requireAdmin(c, next) {
-  const cookie = c.req.header('Cookie') || '';
-  const token = cookie.match(/(?:^|;\s*)jr_session=([^;]+)/)?.[1];
-  if (!token) return c.json({ error: '인증이 필요합니다.' }, 401);
-  const tokenHash = await digest(`${c.env.SESSION_SECRET || ''}:${decodeURIComponent(token)}`);
-  const session = await c.env.DB.prepare(
-    "SELECT token_hash, csrf_token, expires_at FROM admin_sessions WHERE token_hash = ? AND expires_at > strftime('%Y-%m-%dT%H:%M:%fZ','now')"
-  ).bind(tokenHash).first();
-  if (!session) return c.json({ error: '세션이 만료되었습니다.' }, 401);
-  c.set('session', session);
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) {
-    const csrf = c.req.header('X-CSRF-Token');
-    if (!csrf || csrf !== session.csrf_token) return c.json({ error: 'CSRF 검증에 실패했습니다.' }, 403);
-  }
-  await next();
-}
-
 export async function login(c) {
   const env = c.env;
   if (!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD || !env.SESSION_SECRET || env.SESSION_SECRET.length < 32) {
@@ -42,14 +25,12 @@ export async function login(c) {
 }
 
 export async function logout(c) {
-  const session = c.get('session');
-  await c.env.DB.prepare('DELETE FROM admin_sessions WHERE token_hash = ?').bind(session.token_hash).run();
   c.header('Set-Cookie', 'jr_session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0');
   return c.json({ ok: true });
 }
 
 export async function sessionInfo(c) {
-  return c.json({ authenticated: true, csrfToken: c.get('session').csrf_token });
+  return c.json({ authenticated: true, username: '공개 사용자', role: 'public' });
 }
 
 function randomToken() {
