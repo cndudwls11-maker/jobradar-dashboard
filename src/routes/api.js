@@ -67,7 +67,7 @@ api.get('/jobs', async (c) => {
   if (read === 'false') where.push('is_read = 0');
   if (favorite === 'true') where.push('is_favorite = 1');
   if (favorite === 'false') where.push('is_favorite = 0');
-  const orderBy = { published: 'COALESCE(published_at, created_at) DESC, id DESC', collected: 'collected_at DESC, id DESC', deadline: 'CASE WHEN deadline IS NULL THEN 1 ELSE 0 END, deadline ASC, id DESC', company: 'company_name COLLATE NOCASE ASC, id DESC' }[sort];
+  const orderBy = { published: 'is_favorite DESC, COALESCE(published_at, created_at) DESC, id DESC', collected: 'is_favorite DESC, collected_at DESC, id DESC', deadline: 'is_favorite DESC, CASE WHEN deadline IS NULL THEN 1 ELSE 0 END, deadline ASC, id DESC', company: 'is_favorite DESC, company_name COLLATE NOCASE ASC, id DESC' }[sort];
   if (!orderBy) return c.json({ error: '정렬 기준이 올바르지 않습니다.' }, 400);
   const clause = where.join(' AND ');
   const [count, rows] = await Promise.all([

@@ -127,6 +127,8 @@ describe('Worker API public routes', () => {
     await worker.fetch(new Request('https://jobradar.test/api/jobs?mode=all', { headers: { Cookie: cookie } }), { ...baseEnv, DB: db });
     const allQuery = db.state.queries.find(({ sql }) => sql.includes('FROM jobs WHERE'));
     expect(allQuery.sql).toContain('deadline IS NULL OR deadline >= date');
+    const jobsQuery = db.state.queries.find(({ sql }) => sql.includes('SELECT * FROM jobs WHERE'));
+    expect(jobsQuery.sql).toContain('ORDER BY is_favorite DESC');
     await worker.fetch(new Request('https://jobradar.test/api/jobs?mode=favorites', { headers: { Cookie: cookie } }), { ...baseEnv, DB: db });
     const favoriteQuery = db.state.queries.filter(({ sql }) => sql.includes('FROM jobs WHERE')).at(-1);
     expect(favoriteQuery.sql).toContain('is_favorite = 1');
