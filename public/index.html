@@ -9,21 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css?v=navigation-fix-20261115">
-  <script type="module" src="/js/app.js?v=navigation-fix-20261115"></script>
+  <script type="module" src="/js/app.js?v=public-access-20261121"></script>
 </head>
 <body>
-  <div id="login-screen" class="login-screen" hidden>
-    <form id="login-form" class="login-card">
-      <div class="brand-mark">J</div>
-      <h1>JobRadar</h1>
-      <p>관리자 계정으로 로그인하세요.</p>
-      <label>관리자 아이디<input name="username" autocomplete="username" required maxlength="100"></label>
-      <label>비밀번호<input name="password" type="password" autocomplete="current-password" required maxlength="256"></label>
-      <button class="button primary full" type="submit">로그인</button>
-      <div id="login-error" class="form-error" role="alert"></div>
-    </form>
-  </div>
-
   <div class="app-shell">
     <aside id="sidebar" class="sidebar">
       <a class="brand" href="#all" aria-label="JobRadar 홈"><span class="brand-mark">J</span><span>JobRadar<small>CAREER RADAR</small></span></a>
@@ -41,16 +29,13 @@
       <header class="topbar">
         <button id="menu-toggle" class="icon-button mobile-menu" aria-label="메뉴 열기">☰</button>
         <div class="breadcrumb"><span>워크스페이스</span><span class="crumb-sep">/</span><strong id="page-breadcrumb">전체 채용공고</strong></div>
-        <div class="top-actions"><span class="admin-label"><span class="avatar">A</span> 관리자</span><button id="logout-button" class="button ghost small">로그아웃</button></div>
+        <div class="top-actions"><span class="admin-label">공개 워크스페이스</span></div>
       </header>
 
       <div class="content-wrap">
         <section id="view-all" class="view">
           <div class="page-heading"><div><p class="eyebrow">JOB BOARD</p><h1 id="page-title">전체 채용공고</h1><p class="page-description">관심 있는 채용공고를 한곳에서 관리하세요.</p></div>
-            <div class="heading-actions"><button id="manual-job-button" class="button secondary">+ 브라우저 확인 공고 등록</button><button id="collect-button" class="button primary collect-button"><span aria-hidden="true">↻</span> <span id="collect-label">공고 수집</span></button></div>
           </div>
-          <p class="page-description collection-help">저장 조건으로 사이트 검색 탭을 엽니다. 각 공고 상세의 접수 상태와 정보를 직접 확인한 뒤, ‘브라우저 확인 공고 등록’에서 저장해주세요. 브라우저 페이지를 자동 판독하지 않습니다.</p>
-          <div id="site-notice" class="notice notice-info" hidden></div>
           <div class="board-toolbar">
             <div class="search-box"><span aria-hidden="true">⌕</span><input id="search-input" type="search" placeholder="회사명, 직무, 키워드 검색" aria-label="채용공고 검색"><kbd>Enter</kbd></div>
             <button id="filter-toggle" class="button secondary">☷ 필터</button>
@@ -59,7 +44,6 @@
           </div>
           <div id="filters-panel" class="filters-panel" hidden>
             <label>사이트<select id="filter-site"><option value="">전체 사이트</option><option value="saramin">사람인</option><option value="jobkorea">잡코리아</option><option value="incruit">인크루트</option><option value="jasoseol">자소설닷컴</option></select></label>
-            <label>산업<input id="filter-industry" placeholder="산업명"></label>
             <label>경력<select id="filter-career"><option value="">전체</option><option>신입</option><option>경력</option><option>신입/경력</option><option>전체</option></select></label>
             <label>근무지역<input id="filter-location" placeholder="지역명"></label>
             <label>마감<select id="filter-deadline"><option value="">전체</option><option value="open">접수 중/미정</option><option value="expired">마감</option></select></label>
@@ -68,7 +52,7 @@
             <label class="checkbox-filter"><input id="include-expired" type="checkbox"> 마감 공고 포함</label>
           </div>
           <div id="bulk-toolbar" class="bulk-toolbar" hidden><span id="selected-count">0개 선택됨</span><button id="select-page" class="button secondary small">현재 페이지 전체 선택</button><button id="clear-selection" class="button text-button small">선택 해제</button><button id="bulk-delete" class="button danger small">선택 삭제</button></div>
-          <div class="table-wrap"><table class="jobs-table"><thead><tr><th class="select-col"><input id="select-all" type="checkbox" aria-label="현재 페이지 전체 선택"></th><th>회사</th><th>직무</th><th>경력 · 학력</th><th>근무형태</th><th>근무지역</th><th>급여</th><th>마감</th><th>사이트</th><th>확인</th><th>즐겨찾기</th><th>삭제</th></tr></thead><tbody id="jobs-body"></tbody></table>
+          <div class="table-wrap"><table class="jobs-table"><thead><tr><th class="select-col"><input id="select-all" type="checkbox" aria-label="현재 페이지 전체 선택"></th><th>회사</th><th>공고</th><th>경력 · 학력</th><th>근무형태</th><th>근무지역</th><th>급여</th><th>마감</th><th>사이트</th><th>확인</th><th>즐겨찾기</th><th>삭제</th></tr></thead><tbody id="jobs-body"></tbody></table>
             <div id="loading-state" class="state-panel"><span class="spinner"></span><p>채용공고를 불러오는 중입니다.</p></div>
             <div id="empty-state" class="state-panel" hidden><div class="empty-icon">▤</div><h3>저장된 채용공고가 없습니다</h3><p>수집 가능한 사이트가 연결되면 조건에 맞는 공고가 이곳에 표시됩니다.</p></div>
             <div id="error-state" class="state-panel error-state" hidden><h3>목록을 불러오지 못했습니다</h3><p id="load-error"></p><button id="retry-load" class="button secondary">다시 시도</button></div>
@@ -94,7 +78,6 @@
     </main>
   </div>
   <div id="toast-region" class="toast-region" aria-live="polite"></div>
-  <dialog id="manual-job-dialog" class="manual-job-dialog"><form id="manual-job-form"><div class="dialog-heading"><div><p class="eyebrow">MANUAL REVIEW</p><h2>브라우저 확인 공고 등록</h2></div><button type="button" id="manual-job-close" class="icon-button" aria-label="닫기">×</button></div><p class="dialog-description">Ego Browser 등에서 공고 상세를 직접 확인하고 입력하세요. 현재 페이지의 내용과 접수 중 여부를 확인한 항목만 저장합니다. 사이트를 자동으로 읽거나 접근 제한을 우회하지 않습니다.</p><div class="manual-job-grid"><label>채용 사이트<select name="source_site" required><option value="saramin">사람인</option><option value="jobkorea">잡코리아</option><option value="incruit">인크루트</option><option value="jasoseol">자소설닷컴</option></select></label><label>회사명<input name="company_name" maxlength="300" required></label><label class="span-2">공고 제목 / 직무<input name="job_title" maxlength="500" required></label><label>산업<input name="industry" maxlength="200" placeholder="확인된 경우 입력"></label><label>경력 요건<input name="career_requirement" maxlength="200"></label><label>학력 요건<input name="education_requirement" maxlength="200"></label><label>근무형태<input name="employment_type" maxlength="100"></label><label>근무지역<input name="work_location" maxlength="300"></label><label>급여<input name="salary" maxlength="200" placeholder="예: 연봉 3,800만원"></label><label>마감일<input name="deadline" type="date"></label><label class="span-2">원문 URL<input name="original_url" type="url" placeholder="https://..." maxlength="2048" required></label></div><div id="manual-job-error" class="form-error" role="alert"></div><div class="dialog-actions"><button type="button" id="manual-job-cancel" class="button secondary">취소</button><button type="submit" id="manual-job-submit" class="button primary">확인한 공고 저장</button></div></form></dialog>
   <dialog id="confirm-dialog" class="confirm-dialog"><form method="dialog"><h2 id="confirm-title">삭제 확인</h2><p id="confirm-message"></p><div class="dialog-actions"><button value="cancel" class="button secondary">취소</button><button id="confirm-accept" value="confirm" class="button danger">삭제 확인</button></div></form></dialog>
 </body>
 </html>

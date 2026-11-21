@@ -39,14 +39,12 @@ describe('custom industry preferences', () => {
 
   it('adds, saves, reloads and removes a custom industry without duplicating predefined choices', async () => {
     const preferences = { industries: ['금속 제조업'], companies: [], roles: [], locations: [], career_level: '신입' };
-    api.session = vi.fn().mockRejectedValue(new Error('로그인 필요'));
     api.preferences.mockResolvedValue(preferences);
     api.savePreferences.mockImplementation(async (value) => structuredClone(value));
     vi.stubGlobal('CSS', { escape: (value) => value });
     window.location.hash = '#preferences';
     await import('../public/js/app.js');
     await Promise.resolve();
-    elements.get('#login-screen').hidden = true;
     handlers.get('window:hashchange')();
     await vi.waitFor(() => expect(api.preferences).toHaveBeenCalled());
     document.querySelector('#custom-industry').value = '  친환경 에너지  ';
